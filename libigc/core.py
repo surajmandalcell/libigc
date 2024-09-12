@@ -33,8 +33,8 @@ from pathlib2 import Path
 
 from collections import defaultdict
 
-import lib.viterbi as viterbi
-import lib.geo as geo
+from .lib import viterbi
+from .lib import geo
 
 
 def _strip_non_printable_chars(string):
@@ -280,11 +280,16 @@ class GNSSFix:
             The created GNSSFix object
         """
         match = re.match(
-            '^B' + '(\d\d)(\d\d)(\d\d)'
-            + '(\d\d)(\d\d)(\d\d\d)([NS])'
-            + '(\d\d\d)(\d\d)(\d\d\d)([EW])'
-            + '([AV])' + '([-\d]\d\d\d\d)' + '([-\d]\d\d\d\d)'
-            + '([0-9a-zA-Z\-]*).*$', B_record_line)
+            r"^B"
+            + r"(\d\d)(\d\d)(\d\d)"
+            + r"(\d\d)(\d\d)(\d\d\d)([NS])"
+            + r"(\d\d\d)(\d\d)(\d\d\d)([EW])"
+            + r"([AV])"
+            + r"([-\d]\d\d\d\d)"
+            + r"([-\d]\d\d\d\d)"
+            + r"([0-9a-zA-Z\-]*).*$",
+            B_record_line,
+        )
         if match is None:
             return None
         (hours, minutes, seconds,
@@ -620,7 +625,7 @@ class Flight:
         abs_filename = Path(filename).expanduser().absolute()
         with abs_filename.open('r', encoding="ISO-8859-1") as flight_file:
             for line in flight_file:
-                line = line.replace('\n', '').replace('\r', '')
+                line = line.replace(r"\n", "").replace(r"\r", "")
                 if not line:
                     continue
                 if line[0] == 'A':
@@ -733,8 +738,10 @@ class Flight:
     def _parse_h_record(self, record):
         if record[0:5] == 'HFDTE':
             match = re.match(
-                '(?:HFDTE|HFDTEDATE:[ ]*)(\d\d)(\d\d)(\d\d)',
-                record, flags=re.IGNORECASE)
+                r"(?:HFDTE|HFDTEDATE:[ ]*)(\d\d)(\d\d)(\d\d)",
+                record,
+                flags=re.IGNORECASE,
+            )
             if match:
                 dd, mm, yy = [_strip_non_printable_chars(group) for group in match.groups()]
                 year = int(2000 + int(yy))
