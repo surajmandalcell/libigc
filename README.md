@@ -1,4 +1,4 @@
-A simple library to parse IGC logs and extract thermals.
+### A simple library to parse IGC logs and extract thermals.
 
 Uses ground speed to detect flight and aircraft bearing rate of
 change to detect thermalling. Both are smoothed using the
@@ -17,3 +17,18 @@ Example usage:
 ```
 
 Should work both on Python 2.7 and on Python 3.
+
+### Installation
+
+```
+pip install libigc
+```
+
+### Additional information
+
+To publish to PyPI, you'll need to:
+
+- Register an account on PyPI
+- Install twine: `pip install twine`
+- Build your distribution: `python setup.py sdist bdist_wheel`
+- Upload to PyPI: `twine upload dist/*`
