@@ -6,7 +6,7 @@ import tempfile
 from libigc import core as libigc
 from libigc.lib import dumpers
 
-from .test_utils import get_test_data_path
+from tests.test_utils import get_test_data_path
 
 
 class TestDumpers(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 
 from libigc import core as libigc
 
-from .test_utils import get_test_data_path
+from tests.test_utils import get_test_data_path
 
 
 class TestBuildFromBRecord(unittest.TestCase):
@@ -68,7 +68,7 @@ class TestBuildFromBRecord(unittest.TestCase):
 class TestNapretTaskParsing(unittest.TestCase):
 
     def setUp(self):
-        test_file = "../testfiles/napret.lkt"
+        test_file = get_test_data_path("napret.lkt")
         self.task = libigc.Task.create_from_lkt_file(test_file)
 
     def testTaskHasStartTime(self):

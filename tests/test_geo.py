@@ -3,8 +3,6 @@ import unittest
 
 from libigc.lib import geo
 
-from .test_utils import get_test_data_path
-
 
 class TestSphereDistance(unittest.TestCase):
 

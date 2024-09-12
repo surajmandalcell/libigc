@@ -172,3 +172,5 @@ Desktop.ini
 
 re.py
 update_tests.py
+
+!tests/testfiles/*.igc
