@@ -168,3 +168,7 @@ Desktop.ini
 *.tmp
 *.bak
 *.swp
+
+
+re.py
+update_tests.py
