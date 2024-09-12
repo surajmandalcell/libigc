@@ -1,4 +1,4 @@
-.PHONY: test deps publish-minor publish-patch publish-major env
+.PHONY: test deps bump-minor bump-patch bump-major publish env
 
 PYTHON := python3
 PIP := pip
@@ -12,23 +12,25 @@ deps: env
 test: deps
 	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python -m unittest discover tests
 
+clean:
+	rm -rf dist
+	rm -rf build
+	rm -rf *.egg-info
+
 build: deps
 	$(VENV_BIN)/python -m build
 
-publish-minor: test
+bump-minor: test
 	$(VENV_BIN)/bumpversion minor
-	$(MAKE) build
-	$(VENV_BIN)/twine upload dist/*
 
-publish-patch: test
+bump-patch: test
 	$(VENV_BIN)/bumpversion patch
-	$(MAKE) build
-	$(VENV_BIN)/twine upload dist/*
 
-publish-major: test
+bump-major: test
 	$(VENV_BIN)/bumpversion major
-	$(MAKE) build
-	$(VENV_BIN)/twine upload dist/*
+
+publish:
+	$(VENV_BIN)/python -m twine upload dist/*
 
 env:
 	@if [ ! -d "$(VENV)" ]; then \
