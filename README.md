@@ -30,5 +30,10 @@ To publish to PyPI, you'll need to:
 
 - Register an account on PyPI
 - Install twine: `pip install twine`
+- Do `bumpversion patch` (or minor/major) to update the version number in `setup.py`
 - Build your distribution: `python setup.py sdist bdist_wheel`
 - Upload to PyPI: `twine upload dist/*`
+
+### Original author
+
+- [Marcin Osowski](https://github.com/marcin-osowski)
