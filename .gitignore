@@ -170,7 +170,8 @@ Desktop.ini
 *.swp
 
 
+# Custom
 re.py
 update_tests.py
-
 !tests/testfiles/*.igc
+venv.sh

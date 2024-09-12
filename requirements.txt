@@ -3,4 +3,6 @@ pathlib2 >= 2.1.0
 
 # Dev Dependencies
 
+build
+twine
 bumpversion
