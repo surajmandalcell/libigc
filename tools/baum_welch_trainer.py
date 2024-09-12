@@ -16,7 +16,7 @@ from Bio.Seq import Seq
 
 # A hack to import from the parent directory
 sys.path.insert(0, '..')
-import igc_lib
+import libigc
 
 
 def list_igc_files(directory):
@@ -108,7 +108,7 @@ def get_training_sequences(files):
     circling_sequences = []
     flying_sequences = []
     for fname in files:
-        flight = igc_lib.Flight.create_from_file(fname)
+        flight = libigc.Flight.create_from_file(fname)
         if flight.valid:
             circling_sequences.append(get_circling_sequence(flight))
             flying_sequences.append(get_flying_sequence(flight))

@@ -1,6 +1,6 @@
 import unittest
 
-import igc_lib
+import libigc
 
 
 class TestBuildFromBRecord(unittest.TestCase):
@@ -10,13 +10,11 @@ class TestBuildFromBRecord(unittest.TestCase):
         self.test_index = 10
 
     def testBasicBRecordParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
         self.assertIsNotNone(b_record)
 
     def testRawimeParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # 12:27:48, from B "122748" 4612592N01249579EA0043700493extra-3s
         expected_time = 48.0            # seconds
@@ -25,8 +23,7 @@ class TestBuildFromBRecord(unittest.TestCase):
         self.assertAlmostEqual(expected_time, b_record.rawtime)
 
     def testLatParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # 46* 12.592' N, from B122748 "4612592N" 01249579EA0043700493extra-3s
         expected_lat = 12.592 / 60.0  # minutes
@@ -34,8 +31,7 @@ class TestBuildFromBRecord(unittest.TestCase):
         self.assertAlmostEqual(expected_lat, b_record.lat)
 
     def testLonParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # 012* 49.579' E, from B1227484612592N "01249579E" A0043700493extra-3s
         expected_lon = 49.579 / 60.0  # minutes
@@ -43,29 +39,25 @@ class TestBuildFromBRecord(unittest.TestCase):
         self.assertAlmostEqual(expected_lon, b_record.lon)
 
     def testValidityParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # "A", from B1227484612592N01249579E "A" 0043700493extra-3s
         self.assertEqual("A", b_record.validity)
 
     def testPressureAltParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # 437 meters, from B1227484612592N01249579EA "00437" 00493extra-3s
         self.assertEqual(437.0, b_record.press_alt)
 
     def testGNSSAltParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # 493 meters, from B1227484612592N01249579EA00437 "00493" extra-3s
         self.assertEqual(493.0, b_record.gnss_alt)
 
     def testExtrasParse(self):
-        b_record = igc_lib.GNSSFix.build_from_B_record(
-            self.test_record, self.test_index)
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
 
         # "extra-3s", from B1227484612592N01249579EA0043700493 "extra-3s"
         self.assertEqual("extra-3s", b_record.extras)
@@ -75,7 +67,7 @@ class TestNapretTaskParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = 'testfiles/napret.lkt'
-        self.task = igc_lib.Task.create_from_lkt_file(test_file)
+        self.task = libigc.Task.create_from_lkt_file(test_file)
 
     def testTaskHasStartTime(self):
         self.assertAlmostEqual(self.task.start_time, 12*3600)
@@ -106,7 +98,7 @@ class TestNapretFlightParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = 'testfiles/napret.igc'
-        self.flight = igc_lib.Flight.create_from_file(test_file)
+        self.flight = libigc.Flight.create_from_file(test_file)
 
     def testFileParsesOK(self):
         self.assertListEqual(self.flight.notes, [])
@@ -200,7 +192,7 @@ class TestNewIGCDateIncrement(unittest.TestCase):
 
     def setUp(self):
         test_file = "testfiles/new_date_format.igc"
-        self.flight = igc_lib.Flight.create_from_file(test_file)
+        self.flight = libigc.Flight.create_from_file(test_file)
 
     def testFileParsesOK(self):
         self.assertListEqual(self.flight.notes, [])
@@ -215,7 +207,7 @@ class TestNoTimeIncrementFlightParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = 'testfiles/no_time_increment.igc'
-        self.flight = igc_lib.Flight.create_from_file(test_file)
+        self.flight = libigc.Flight.create_from_file(test_file)
 
     def testFileParsesOK(self):
         self.assertListEqual(self.flight.notes, [])
@@ -231,7 +223,7 @@ class TestOlsztynFlightParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = 'testfiles/olsztyn.igc'
-        self.flight = igc_lib.Flight.create_from_file(test_file)
+        self.flight = libigc.Flight.create_from_file(test_file)
 
     def testFileParsesOK(self):
         self.assertListEqual(self.flight.notes, [])
@@ -265,18 +257,18 @@ class TestNewZealandFlightParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = 'testfiles/new_zealand.igc'
-        self.flight = igc_lib.Flight.create_from_file(test_file)
+        self.flight = libigc.Flight.create_from_file(test_file)
 
     def testFileParsesOK(self):
         self.assertListEqual(self.flight.notes, [])
         self.assertTrue(self.flight.valid)
 
 
-class ParsePickFirst(igc_lib.FlightParsingConfig):
+class ParsePickFirst(libigc.FlightParsingConfig):
     which_flight_to_pick = 'first'
 
 
-class ParsePickConcat(igc_lib.FlightParsingConfig):
+class ParsePickConcat(libigc.FlightParsingConfig):
     which_flight_to_pick = 'concat'
 
 
@@ -286,22 +278,26 @@ class TestWhichFlightToPick(unittest.TestCase):
         self.test_file = 'testfiles/flight_with_middle_landing.igc'
 
     def testFileParsesOKPickFirst(self):
-        flight = igc_lib.Flight.create_from_file(
-            self.test_file, config_class=ParsePickFirst)
+        flight = libigc.Flight.create_from_file(
+            self.test_file, config_class=ParsePickFirst
+        )
         self.assertListEqual(flight.notes, [])
         self.assertTrue(flight.valid)
 
     def testFileParsesOKPickConcat(self):
-        flight = igc_lib.Flight.create_from_file(
-            self.test_file, config_class=ParsePickConcat)
+        flight = libigc.Flight.create_from_file(
+            self.test_file, config_class=ParsePickConcat
+        )
         self.assertListEqual(flight.notes, [])
         self.assertTrue(flight.valid)
 
     def testConcatIsLongerThanFirst(self):
-        flight_first = igc_lib.Flight.create_from_file(
-            self.test_file, config_class=ParsePickFirst)
-        flight_concat = igc_lib.Flight.create_from_file(
-            self.test_file, config_class=ParsePickConcat)
+        flight_first = libigc.Flight.create_from_file(
+            self.test_file, config_class=ParsePickFirst
+        )
+        flight_concat = libigc.Flight.create_from_file(
+            self.test_file, config_class=ParsePickConcat
+        )
         # Takeoff is the same
         self.assertEqual(
             flight_first.takeoff_fix.timestamp,

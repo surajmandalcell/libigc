@@ -15,7 +15,7 @@ If there's more than one actual flight in the IGC file then
 the `which_flight_to_pick` option in FlightParsingConfig
 will determine behavior.
 
-For example usage see the attached igc_lib_demo.py file. Please note
+For example usage see the attached libigc_demo.py file. Please note
 that after creating a Flight instance you should always check for its
 validity via the `Flight.valid` attribute prior to using it, as many
 IGC records are broken. See `Flight.notes` for details on why a file

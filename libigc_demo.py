@@ -4,7 +4,7 @@ from __future__ import print_function
 import os
 import sys
 
-import igc_lib
+import libigc
 import lib.dumpers as dumpers
 
 
@@ -29,8 +29,7 @@ def dump_flight(flight, input_file):
     flight_csv_file = "%s-flight.csv" % input_base_file
     kml_file = "%s-flight.kml" % input_base_file
 
-    print("Dumping thermals to %s, %s and %s" %
-          (wpt_file, cup_file, thermals_csv_file))
+    print("Dumping thermals to %s, %s and %s" % (wpt_file, cup_file, thermals_csv_file))
     dumpers.dump_thermals_to_wpt_file(flight, wpt_file, True)
     dumpers.dump_thermals_to_cup_file(flight, cup_file)
 
@@ -49,7 +48,7 @@ def main():
     if len(sys.argv) > 2:
         task_file = sys.argv[2]
 
-    flight = igc_lib.Flight.create_from_file(input_file)
+    flight = libigc.Flight.create_from_file(input_file)
     if not flight.valid:
         print("Provided flight is invalid:")
         print(flight.notes)
@@ -59,7 +58,7 @@ def main():
     dump_flight(flight, input_file)
 
     if task_file:
-        task = igc_lib.Task.create_from_lkt_file(task_file)
+        task = libigc.Task.create_from_lkt_file(task_file)
         reached_turnpoints = task.check_flight(flight)
         for t, fix in enumerate(reached_turnpoints):
             print("Turnpoint[%d] achieved at:" % t, fix.rawtime)

@@ -3,7 +3,7 @@ import shutil
 import unittest
 import tempfile
 
-import igc_lib
+import libigc
 import lib.dumpers as dumpers
 
 
@@ -11,7 +11,7 @@ class TestDumpers(unittest.TestCase):
 
     def setUp(self):
         igc_file = 'testfiles/napret.igc'
-        self.flight = igc_lib.Flight.create_from_file(igc_file)
+        self.flight = libigc.Flight.create_from_file(igc_file)
         self.tmp_output_dir = tempfile.mkdtemp()
 
     def tearDown(self):
