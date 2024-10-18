@@ -6,18 +6,18 @@ VENV := venv
 VENV_BIN := $(VENV)/bin
 PYTHONPATH := $(shell pwd)
 
-deps: env
-	$(VENV_BIN)/pip install -r requirements.txt
+deps:
+	$(VENV_BIN)/python3 -m pip install -r requirements.txt
 
-test: deps
-	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python -m unittest discover tests
+test:
+	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python3 -m unittest discover tests
 
 clean:
 	rm -rf dist
 	rm -rf build
 	rm -rf *.egg-info
 
-build: deps
+build:
 	$(VENV_BIN)/python -m build
 
 bump-major: test
