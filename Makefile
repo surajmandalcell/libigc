@@ -9,8 +9,16 @@ PYTHONPATH := $(shell pwd)
 deps:
 	$(VENV_BIN)/python3 -m pip install -r requirements.txt
 
+system-deps:
+	sudo apt-get update
+	sudo apt-get install -y python3-tk
+
+# test:
+# 	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python3 -m unittest discover tests
+
 test:
-	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python3 -m unittest discover tests
+	export DISPLAY=:0
+	$(VENV_BIN)/python test_igc_parser.py
 
 clean:
 	rm -rf dist
