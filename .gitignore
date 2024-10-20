@@ -160,6 +160,7 @@ Desktop.ini
 *.wpt
 *.cup
 *.kml
+*.IGC
 
 # Temporary files
 *.tmp
