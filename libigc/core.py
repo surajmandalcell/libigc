@@ -523,30 +523,43 @@ class Flight:
             """Computes the previous fix to be used in bearing rate change."""
             prev_fix = None
             for i in range(curr_fix - 1, 0, -1):
-                time_dist = math.fabs(self.fixes[curr_fix].timestamp -
-                                      self.fixes[i].timestamp)
-                if (time_dist >
-                        self._config.min_time_for_bearing_change - 1e-7):
+                time_dist = math.fabs(
+                    self.fixes[curr_fix].timestamp - self.fixes[i].timestamp
+                )
+                if time_dist > self._config.min_time_for_bearing_change - 1e-7:
                     prev_fix = i
                     break
             return prev_fix
+
+        def normalize_bearing_change(change):
+            """Normalizes bearing change to handle 0/360 crossing properly."""
+            while change > 180.0:
+                change -= 360.0
+            while change < -180.0:
+                change += 360.0
+            return change
 
         for curr_fix in range(len(self.fixes)):
             prev_fix = find_prev_fix(curr_fix)
 
             if prev_fix is None:
                 self.fixes[curr_fix].bearing_change_rate = 0.0
+                continue
+
+            bearing_change = normalize_bearing_change(
+                self.fixes[curr_fix].bearing - self.fixes[prev_fix].bearing
+            )
+
+            time_change = (
+                self.fixes[curr_fix].timestamp - self.fixes[prev_fix].timestamp
+            )
+
+            # Avoid division by zero
+            if abs(time_change) < 1e-7:
+                self.fixes[curr_fix].bearing_change_rate = 0.0
             else:
-                bearing_change = (self.fixes[prev_fix].bearing -
-                                  self.fixes[curr_fix].bearing)
-                if math.fabs(bearing_change) > 180.0:
-                    if bearing_change < 0.0:
-                        bearing_change += 360.0
-                    else:
-                        bearing_change -= 360.0
-                time_change = (self.fixes[prev_fix].timestamp -
-                               self.fixes[curr_fix].timestamp)
-                change_rate = bearing_change/time_change
+                # Positive rate means turning right, negative means turning left
+                change_rate = bearing_change / time_change
                 self.fixes[curr_fix].bearing_change_rate = change_rate
 
     def _circling_emissions(self):
@@ -637,5 +650,3 @@ class Flight:
         if gliding_now:
             glide = Glide(first_glide_fix, last_glide_fix, distance)
             self.glides.append(glide)
-
-
