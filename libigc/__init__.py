@@ -10,4 +10,4 @@ from .flight_parsing_config import FlightParsingConfig
 __all__ = ['Flight', 'GNSSFix', 'Thermal', 'Glide', 'Task', 'Turnpoint', 'FlightParsingConfig']
 
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
