@@ -1,6 +1,6 @@
 import re
-import math
 from .lib import geo
+from libigc.utils import _rawtime_float_to_hms
 
 
 class GNSSFix:

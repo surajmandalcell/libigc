@@ -1,4 +1,5 @@
 import math
+from libigc.utils import _rawtime_float_to_hms
 
 
 class Glide:
@@ -47,4 +48,3 @@ class Glide:
              "avg L/D=%.2f duration=%dm %ds)") % (
                 self.track_length, self.speed(), self.glide_ratio(),
                 hms.minutes, hms.seconds))
-

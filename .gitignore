@@ -173,3 +173,6 @@ re.py
 update_tests.py
 !tests/testfiles/*.igc
 venv.sh
+
+
+repomix-output.txt

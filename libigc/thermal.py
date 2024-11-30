@@ -1,5 +1,5 @@
 import math
-
+from libigc.utils import _rawtime_float_to_hms
 
 class Thermal:
     """Represents a single thermal detected in a flight.
@@ -33,4 +33,3 @@ class Thermal:
         hms = _rawtime_float_to_hms(self.time_change())
         return ("Thermal(vertical_velocity=%.2f m/s, duration=%dm %ds)" %
                 (self.vertical_velocity(), hms.minutes, hms.seconds))
-

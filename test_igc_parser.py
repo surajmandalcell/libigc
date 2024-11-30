@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+import json
 
 # Adjust this import path based on your actual project structure
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -65,26 +66,11 @@ def test_igc_parser():
     flight = Flight.create_from_file(igc_file_path)
 
     # Prepare the output
-    output = []
-    output.append(f"Analyzed file: {igc_file_path}")
-    output.append(f"Flight validity: {flight.valid}")
-    output.append(f"Number of fixes: {len(flight.fixes)}")
-    
-    if hasattr(flight, 'thermals'):
-        output.append(f"Number of thermals: {len(flight.thermals)}")
-    
-    if hasattr(flight, 'glides'):
-        output.append(f"Number of glides: {len(flight.glides)}")
-    
-    if hasattr(flight, 'takeoff_fix'):
-        output.append(f"Takeoff time: {flight.takeoff_fix.rawtime}")
-    
-    if hasattr(flight, 'landing_fix'):
-        output.append(f"Landing time: {flight.landing_fix.rawtime}")
-    
-    output.append("Flight notes:")
-    for note in flight.notes:
-        output.append(f"  - {note}")
+    output = [f"Analyzed file: {igc_file_path}"]
+    for attr in dir(flight):
+        if not attr.startswith("_") and not callable(getattr(flight, attr)):
+            value = getattr(flight, attr)
+            output.append(f"{attr}: {value}")
 
     # Write the output to dist/test_output.txt
     output_path = Path('dist/test_output.txt')
@@ -92,7 +78,13 @@ def test_igc_parser():
     with output_path.open('w') as f:
         f.write('\n'.join(output))
 
+    # Write the raw output to dist/og.txt (more detailed)
+    raw_output_path = Path("dist/og1.txt")
+    with raw_output_path.open("w") as f:
+        f.write(json.dumps(flight.__dict__, indent=4, default=str))
+
     print(f"Test output written to {output_path}")
+    print(f"Raw output written to {raw_output_path}")
 
 if __name__ == "__main__":
     test_igc_parser()

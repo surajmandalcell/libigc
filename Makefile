@@ -1,65 +1,54 @@
-.PHONY: test deps bump-major bump-minor bump-patch publish env
+SHELL := powershell.exe
+.SHELLFLAGS := -Command
 
-PYTHON := python3
+# Basic variables
+PYTHON := python
 PIP := pip
-VENV := venv
-VENV_BIN := $(VENV)/bin
-PYTHONPATH := $(shell pwd)
+VENV := .venv
+VENV_BIN := $(VENV)\Scripts
+PYTHONPATH := $(CURDIR)
+
+.PHONY: test deps bump-major bump-minor bump-patch publish env pack mix
+
+
+pack:
+	repomix
+
+mix:
+	make pack
 
 deps:
-	$(VENV_BIN)/python3 -m pip install -r requirements.txt
-
-system-deps:
-	sudo apt-get update
-	sudo apt-get install -y python3-tk
-
-# test:
-# 	PYTHONPATH=$(PYTHONPATH) $(VENV_BIN)/python3 -m unittest discover tests
+	& $(VENV_BIN)\python -m pip install -r requirements.txt
 
 test:
-	export DISPLAY=:0
-	$(VENV_BIN)/python test_igc_parser.py
+	& $(VENV_BIN)\python test_igc_parser.py
 
 clean:
-	rm -rf dist
-	rm -rf build
-	rm -rf *.egg-info
+	if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+	if (Test-Path build) { Remove-Item -Recurse -Force build }
+	Remove-Item -Force *.egg-info -ErrorAction SilentlyContinue
 
 build:
-	$(VENV_BIN)/python -m build
+	& $(VENV_BIN)\python -m build
 
 bump-major: test
-	$(VENV_BIN)/bumpversion major
+	& $(VENV_BIN)\bumpversion major
 
 bump-minor: test
-	$(VENV_BIN)/bumpversion minor
+	& $(VENV_BIN)\bumpversion minor
 
 bump-patch: test
-	$(VENV_BIN)/bumpversion patch
+	& $(VENV_BIN)\bumpversion patch
 
 publish:
-	$(VENV_BIN)/python -m twine upload dist/*
+	& $(VENV_BIN)\python -m twine upload dist/*
 
 env:
-	@if [ ! -d "$(VENV)" ]; then \
+	if (-not (Test-Path $(VENV))) { \
 		$(PYTHON) -m venv $(VENV); \
-		echo "Virtual environment created."; \
-	fi
-	@echo "Creating venv.sh for easy activation"
-	@echo "source $(VENV_BIN)/activate" > venv.sh
-	@chmod +x venv.sh
-	@echo "To activate the virtual environment in the current shell, run:"
-	@echo "source venv.sh"
-	# Copy the activation command to the clipboard
-	@if [ "$(shell uname)" = "Linux" ]; then \
-		if grep -qi microsoft /proc/version; then \
-			echo "source venv.sh" | clip.exe; \
-			echo "Activation command copied to clipboard for WSL."; \
-		else \
-			echo "source venv.sh" | xclip -selection clipboard; \
-			echo "Activation command copied to clipboard."; \
-		fi \
-	elif [ "$(shell uname)" = "Darwin" ]; then \
-		echo "source venv.sh" | pbcopy; \
-		echo "Activation command copied to clipboard."; \
-	fi
+		& $(VENV_BIN)\Activate.ps1; \
+		Write-Host "Virtual environment created and activated."; \
+	} else { \
+		& $(VENV_BIN)\Activate.ps1; \
+		Write-Host "Virtual environment activated."; \
+	}
