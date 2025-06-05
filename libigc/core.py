@@ -538,7 +538,25 @@ class Flight:
             while change < -180.0:
                 change += 360.0
             return change
+        
+        def infer_wrapped_bearing_change(prev_bearing, curr_bearing, dt, prev_rate):
+            # Try all 3 possible deltas
+            raw_change = curr_bearing - prev_bearing
 
+            options = [
+                raw_change,                  # No wrapping
+                raw_change - 360.0,          # Wrapped forward
+                raw_change + 360.0           # Wrapped backward
+            ]
+
+            # Pick the one with rate closest to previous rate
+            best_change = min(
+                options,
+                key=lambda c: abs((c / dt) - prev_rate) if dt > 0 else float("inf")
+            )
+
+            return best_change
+        
         for curr_fix in range(len(self.fixes)):
             prev_fix = find_prev_fix(curr_fix)
 
@@ -546,13 +564,11 @@ class Flight:
                 self.fixes[curr_fix].bearing_change_rate = 0.0
                 continue
 
-            bearing_change = normalize_bearing_change(
-                self.fixes[curr_fix].bearing - self.fixes[prev_fix].bearing
-            )
-
             time_change = (
                 self.fixes[curr_fix].timestamp - self.fixes[prev_fix].timestamp
             )
+            
+            bearing_change = infer_wrapped_bearing_change(self.fixes[prev_fix].bearing, self.fixes[curr_fix].bearing, time_change, self.fixes[prev_fix].bearing_change_rate)
 
             # Avoid division by zero
             if abs(time_change) < 1e-7:
