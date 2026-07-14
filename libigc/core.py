@@ -1,19 +1,16 @@
 from __future__ import print_function
 
 import re
-import collections
 import datetime
 import math
 from pathlib2 import Path
 
 from .lib import viterbi
-from .lib import geo
 from .gnss_fix import GNSSFix
 from .thermal import Thermal
 from .glide import Glide
-from .task import Task, Turnpoint
 from .flight_parsing_config import FlightParsingConfig
-from .utils import _strip_non_printable_chars, _rawtime_float_to_hms
+from .utils import _strip_non_printable_chars
 
 class Flight:
     """Parses IGC file, detects thermals and checks for record anomalies.

@@ -1,5 +1,6 @@
 import unittest
 
+from libigc.task import Task
 from libigc import core as libigc
 
 from tests.test_utils import get_test_data_path
@@ -69,7 +70,7 @@ class TestNapretTaskParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = get_test_data_path("napret.lkt")
-        self.task = libigc.Task.create_from_lkt_file(test_file)
+        self.task = Task.create_from_lkt_file(test_file)
 
     def testTaskHasStartTime(self):
         self.assertAlmostEqual(self.task.start_time, 12 * 3600)
