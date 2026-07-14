@@ -1,5 +1,7 @@
 import xml.dom.minidom
 from collections import defaultdict
+
+from libigc import Flight
 from .lib import geo
 
 class Turnpoint:
@@ -13,11 +15,17 @@ class Turnpoint:
         "End_of_speed_section", "goal_cylinder", "goal_line"
     """
 
-    def __init__(self, lat, lon, radius, kind):
+    lat: float
+    lon: float
+    radius: float
+    kind: str
+
+    def __init__(self, lat: float, lon: float, radius: float, kind: str):
         self.lat = lat
         self.lon = lon
         self.radius = radius
         self.kind = kind
+
         assert kind in ["start_exit", "start_enter", "cylinder",
                         "End_of_speed_section", "goal_cylinder",
                         "goal_line"], \
@@ -44,8 +52,17 @@ class Task:
                   No credit is given for distance covered after this time.
     """
 
+    turnpoints: list[Turnpoint]
+    start_time: int
+    end_time: int
+
+    def __init__(self, turnpoints: list[Turnpoint], start_time: int, end_time: int):
+        self.turnpoints = turnpoints
+        self.start_time = start_time
+        self.end_time = end_time
+
     @staticmethod
-    def create_from_lkt_file(filename):
+    def create_from_lkt_file(filename: str):
         """ Creates Task from LK8000 task file, which is in xml format.
             LK8000 does not have End of Speed Section or task finish time.
             For the goal, at the moment, Turnpoints can't handle goal cones or
@@ -55,7 +72,8 @@ class Task:
         # Open XML document using minidom parser
         DOMTree = xml.dom.minidom.parse(filename)
         task = DOMTree.documentElement
-
+        assert task is not None, "Task file is empty or not valid XML"
+        
         # Get the taskpoints, waypoints and time gate
         # TODO: add code to handle if these tags are missing.
         taskpoints = task.getElementsByTagName("taskpoints")[0]
@@ -82,7 +100,7 @@ class Task:
             coords[name].append(latitude)
 
         # Create list of turnpoints
-        turnpoints = []
+        turnpoints: list[Turnpoint] = []
         for point in tpoints:
             lat = coords[point.getAttribute("name")][1]
             lon = coords[point.getAttribute("name")][0]
@@ -112,15 +130,12 @@ class Task:
 
             turnpoint = Turnpoint(lat, lon, radius, kind)
             turnpoints.append(turnpoint)
+
         task = Task(turnpoints, start_time, end_time)
         return task
 
-    def __init__(self, turnpoints, start_time, end_time):
-        self.turnpoints = turnpoints
-        self.start_time = start_time
-        self.end_time = end_time
 
-    def check_flight(self, flight):
+    def check_flight(self, flight: Flight):
         """ Checks a Flight object against the task.
 
             Args:
