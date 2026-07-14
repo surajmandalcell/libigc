@@ -1,6 +1,12 @@
-import collections
+from typing import NamedTuple
 
-def _strip_non_printable_chars(string):
+class HourMinuteSecond(NamedTuple):
+    """A named tuple to represent hours, minutes and seconds."""
+    hours: int
+    minutes: int
+    seconds: int
+
+def _strip_non_printable_chars(string: str):
     """Filters a string removing non-printable characters.
 
     Args:
@@ -16,7 +22,7 @@ def _strip_non_printable_chars(string):
     return ''.join(printable_string)
 
 
-def _rawtime_float_to_hms(timef):
+def _rawtime_float_to_hms(timef: float):
     """Converts time from floating point seconds to hours/minutes/seconds.
 
     Args:
@@ -26,6 +32,4 @@ def _rawtime_float_to_hms(timef):
         A namedtuple with hours, minutes and seconds elements
     """
     time = int(round(timef))
-    hms = collections.namedtuple('hms', ['hours', 'minutes', 'seconds'])
-
-    return hms((time/3600), (time % 3600)/60, time % 60)
+    return HourMinuteSecond((time // 3600), (time % 3600) // 60, time % 60)
