@@ -1,7 +1,19 @@
+from __future__ import annotations
+
+from enum import Enum
 import re
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # `core` imports `GNSSFix`, and we need `Flight` for type hinting.
+    # This if TYPE_CHECKING block avoids circular import issues.
+    from libigc.core import Flight
 from .lib import geo
 from libigc.utils import _rawtime_float_to_hms
 
+class FixValidity(str, Enum):
+    A = "A" # 3D Fix
+    V = "V" # 2D fix
 
 class GNSSFix:
     """Stores single GNSS flight recorder fix (a B-record).
@@ -27,7 +39,7 @@ class GNSSFix:
     """
 
     @staticmethod
-    def build_from_B_record(B_record_line, index):
+    def build_from_B_record(B_record_line: str, index: int):
         """Creates GNSSFix object from IGC B-record line.
 
         Args:
@@ -73,11 +85,14 @@ class GNSSFix:
         press_alt = float(press_alt)
         gnss_alt = float(gnss_alt)
 
-        return GNSSFix(rawtime, lat, lon, validity, press_alt, gnss_alt,
-                       index, extras)
+        fix_validity = FixValidity(validity)
 
-    def __init__(self, rawtime, lat, lon, validity, press_alt, gnss_alt,
-                 index, extras):
+
+        return GNSSFix(rawtime, lat, lon, fix_validity, press_alt, gnss_alt,
+                       index, extras)
+ 
+    def __init__(self, rawtime: float, lat: float, lon: float, validity: FixValidity, press_alt: float, gnss_alt: float,
+                 index: int, extras: str,):
         """Initializer of GNSSFix. Not meant to be used directly."""
         self.rawtime = rawtime
         self.lat = lat
@@ -89,7 +104,7 @@ class GNSSFix:
         self.extras = extras
         self.flight = None
 
-    def set_flight(self, flight):
+    def set_flight(self, flight: Flight):
         """Sets parent Flight object."""
         self.flight = flight
         if self.flight.alt_source == "PRESS":
@@ -109,11 +124,11 @@ class GNSSFix:
             (_rawtime_float_to_hms(self.rawtime) +
              (self.lat, self.lon, self.press_alt, self.gnss_alt)))
 
-    def bearing_to(self, other):
+    def bearing_to(self, other: GNSSFix):
         """Computes bearing in degrees to another GNSSFix."""
         return geo.bearing_to(self.lat, self.lon, other.lat, other.lon)
 
-    def distance_to(self, other):
+    def distance_to(self, other: GNSSFix):
         """Computes great circle distance in kilometers to another GNSSFix."""
         return geo.earth_distance(self.lat, self.lon, other.lat, other.lon)
 
