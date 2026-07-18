@@ -8,7 +8,7 @@ class SimpleViterbiDecoder(object):
     states and the emissions are represented by 0 and 1.
     """
 
-    def __init__(self, init_probs, transition_probs, emission_probs):
+    def __init__(self, init_probs: list[float], transition_probs: list[list[float]], emission_probs: list[list[float]]):
         """Initializer for the class.
 
         Args:
@@ -43,15 +43,15 @@ class SimpleViterbiDecoder(object):
             return []
 
         N = len(emissions)
-        state_log = [[None, None] for i in range(N)]
-        backtrack_info = [[None, None] for i in range(N)]
+        state_log: list[list[float]] = [[0.0, 0.0] for _ in range(N)]
+        backtrack_info = [[0, 0] for i in range(N)]
 
         # Forward pass, calculate the probabilities of states and the
         # back-tracking information.
 
         # The initial state probability estimates are treated separately
         # because these come from the initial distribution.
-        state_log[0] = self._init_log
+        state_log[0] = list(self._init_log)
         state_log[0][0] += self._emission_log[0][emissions[0]]
         state_log[0][1] += self._emission_log[1][emissions[0]]
 
