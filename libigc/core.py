@@ -1,10 +1,11 @@
+from enum import Enum
 import re
 import datetime
 import math
 from pathlib2 import Path
 
 from .lib import viterbi
-from .gnss_fix import GNSSFix
+from .gnss_fix import GNSSFix, AltitudeSource
 from .thermal import Thermal
 from .glide import Glide
 from .flight_parsing_config import FlightParsingConfig
@@ -46,6 +47,72 @@ class Flight:
         press_alt_valid: a bool, whether the pressure altitude sensor is OK
         gnss_alt_valid: a bool, whether the GNSS altitude sensor is OK
     """
+
+    fixes: list[GNSSFix]
+    _config: FlightParsingConfig
+    valid: bool
+    notes: list[str]
+    alt_source: AltitudeSource
+
+
+    def __init__(self, fixes: list[GNSSFix], a_records: list, h_records: list, i_records: list, config: FlightParsingConfig):
+        """Initializer of the Flight class. Do not use directly."""
+        self._config = config
+        self.fixes = fixes
+        self.valid = True
+        self.notes = []
+        if len(fixes) < self._config.min_fixes:
+            self.notes.append(
+                "Error: This file has %d fixes, less than "
+                "the minimum %d." % (len(fixes), self._config.min_fixes))
+            self.valid = False
+            return
+
+        self._check_altitudes()
+        if not self.valid:
+            return
+
+        self._check_fix_rawtime()
+        if not self.valid:
+            return
+
+        if self.press_alt_valid:
+            self.alt_source = AltitudeSource.PRESSURE
+        elif self.gnss_alt_valid:
+            self.alt_source = AltitudeSource.GNSS
+        else:
+            self.notes.append(
+                "Error: neither pressure nor gnss altitude is valid.")
+            self.valid = False
+            return
+
+        if a_records:
+            self._parse_a_records(a_records)
+        if i_records:
+            self._parse_i_records(i_records)
+        if h_records:
+            self._parse_h_records(h_records)
+
+        if not hasattr(self, 'date_timestamp'):
+            self.notes.append("Error: no date record (HFDTE) in the file")
+            self.valid = False
+            return
+
+        for fix in self.fixes:
+            fix.set_flight(self)
+
+        self._compute_ground_speeds()
+        self._compute_flight()
+        self._compute_takeoff_landing()
+        if not hasattr(self, 'takeoff_fix'):
+            self.notes.append("Error: did not detect takeoff.")
+            self.valid = False
+            return
+
+        self._compute_bearings()
+        self._compute_bearing_change_rates()
+        self._compute_circling()
+        self._find_thermals()
 
     @staticmethod
     def create_from_file(filename, config_class=FlightParsingConfig):
@@ -90,64 +157,6 @@ class Flight:
         flight = Flight(fixes, a_records, h_records, i_records, config)
         return flight
 
-    def __init__(self, fixes, a_records, h_records, i_records, config):
-        """Initializer of the Flight class. Do not use directly."""
-        self._config = config
-        self.fixes = fixes
-        self.valid = True
-        self.notes = []
-        if len(fixes) < self._config.min_fixes:
-            self.notes.append(
-                "Error: This file has %d fixes, less than "
-                "the minimum %d." % (len(fixes), self._config.min_fixes))
-            self.valid = False
-            return
-
-        self._check_altitudes()
-        if not self.valid:
-            return
-
-        self._check_fix_rawtime()
-        if not self.valid:
-            return
-
-        if self.press_alt_valid:
-            self.alt_source = "PRESS"
-        elif self.gnss_alt_valid:
-            self.alt_source = "GNSS"
-        else:
-            self.notes.append(
-                "Error: neither pressure nor gnss altitude is valid.")
-            self.valid = False
-            return
-
-        if a_records:
-            self._parse_a_records(a_records)
-        if i_records:
-            self._parse_i_records(i_records)
-        if h_records:
-            self._parse_h_records(h_records)
-
-        if not hasattr(self, 'date_timestamp'):
-            self.notes.append("Error: no date record (HFDTE) in the file")
-            self.valid = False
-            return
-
-        for fix in self.fixes:
-            fix.set_flight(self)
-
-        self._compute_ground_speeds()
-        self._compute_flight()
-        self._compute_takeoff_landing()
-        if not hasattr(self, 'takeoff_fix'):
-            self.notes.append("Error: did not detect takeoff.")
-            self.valid = False
-            return
-
-        self._compute_bearings()
-        self._compute_bearing_change_rates()
-        self._compute_circling()
-        self._find_thermals()
 
     def _parse_a_records(self, a_records):
         """Parses the IGC A record.

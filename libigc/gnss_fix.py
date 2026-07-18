@@ -15,6 +15,10 @@ class FixValidity(str, Enum):
     A = "A" # 3D Fix
     V = "V" # 2D fix
 
+class AltitudeSource(str, Enum):
+    PRESSURE = "PRESS"
+    GNSS = "GNSS"
+
 class GNSSFix:
     """Stores single GNSS flight recorder fix (a B-record).
 
@@ -107,9 +111,9 @@ class GNSSFix:
     def set_flight(self, flight: Flight):
         """Sets parent Flight object."""
         self.flight = flight
-        if self.flight.alt_source == "PRESS":
+        if self.flight.alt_source == AltitudeSource.PRESSURE:
             self.alt = self.press_alt
-        elif self.flight.alt_source == "GNSS":
+        elif self.flight.alt_source == AltitudeSource.GNSS:
             self.alt = self.gnss_alt
         else:
             assert(False)
