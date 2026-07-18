@@ -1,38 +1,42 @@
-import collections
+from typing import NamedTuple
 import simplekml
 from pathlib import Path
 
+class DegreeMinuteSecond(NamedTuple):
+    """A named tuple to represent degrees, minutes and seconds."""
+    hemisphere: str
+    degrees: float
+    minutes: float
+    seconds: float
 
-def _degrees_float_to_degrees_minutes_seconds(dd, lon_or_lat):
+
+def _degrees_float_to_degrees_minutes_seconds(dd: float, *, long: bool = False) -> DegreeMinuteSecond:
     """Converts from floating point degrees to degrees/minutes/seconds.
 
     Args:
         dd: a float, degrees to be converted
-        lon_or_lat: a string, argument used to calculate the hemisphere;
-        options are 'lon' - for longitude or 'lat' - for latitude
+        long: a bool, argument used to calculate the hemisphere; True for longitude, False for latitude
 
     Returns:
-        A namedtuple with hemisphere, degrees, minutes and floating point
+        A DegreeMinuteSecond namedtuple with hemisphere, degrees, minutes and floating point
         seconds elements.
     """
-    ddmmss = collections.namedtuple(
-        'ddmmss', ['hemisphere', 'degrees', 'minutes', 'seconds'])
     negative = dd < 0
     dd = abs(dd)
     minutes, seconds = divmod(dd * 3600, 60)
     degrees, minutes = divmod(minutes, 60)
-    if lon_or_lat == 'lon':
+    if long:
         hemisphere = 'E'
-    elif lon_or_lat == 'lat':
+    else:
         hemisphere = 'N'
 
     if negative:
-        if lon_or_lat == 'lon':
+        if long:
             hemisphere = 'W'
-        elif lon_or_lat == 'lat':
+        else:
             hemisphere = 'S'
 
-    return ddmmss(hemisphere, degrees, minutes, seconds)
+    return DegreeMinuteSecond(hemisphere, degrees, minutes, seconds)
 
 
 def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
@@ -50,9 +54,9 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
 
         for x, thermal in enumerate(flight.thermals):
             lat = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lat, 'lat')
+                flight.thermals[x].enter_fix.lat, long=False)
             lon = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lon, 'lon')
+                flight.thermals[x].enter_fix.lon, long=True)
             wpt.write(u"%02d        " % x)
             wpt.write(u"%s %02d %02d %05.2f    " % (
                 lat.hemisphere, lat.degrees, lat.minutes, lat.seconds))
@@ -62,9 +66,9 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
 
             if endpoints:
                 lat = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lat, 'lat')
+                    flight.thermals[x].exit_fix.lat, long=False)
                 lon = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lon, 'lon')
+                    flight.thermals[x].exit_fix.lon, long=True)
                 wpt.write(u"%02dEND     " % x)
                 wpt.write(u"%s %02d %02d %05.2f    " % (
                     lat.hemisphere, lat.degrees, lat.minutes, lat.seconds))
@@ -87,8 +91,8 @@ def dump_thermals_to_cup_file(flight, cup_filename_local):
         wpt.write(u'lon,elev,style,rwdir,rwlen,freq,desc,userdata,pics\n')
 
         def write_fix(name, fix):
-            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, 'lat')
-            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, 'lon')
+            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, long=False)
+            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, long=True)
             wpt.write(u'"%s",,,%02d%02d.%03d%s,' % (
                 name, lat.degrees, lat.minutes,
                 int(round(lat.seconds/60.0*1000.0)), lat.hemisphere))
