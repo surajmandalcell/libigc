@@ -1,8 +1,17 @@
-from typing import NamedTuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
 import simplekml
 from pathlib import Path
 
-from libigc.core import Flight
+if TYPE_CHECKING:
+    # ------------------------------------------------------------------
+    # `Flight` is needed only for type hints. Importing it at runtime
+    # would make this module depend on the import order inside
+    # `libigc/__init__.py` (a circular import waiting to happen), so it
+    # is guarded behind TYPE_CHECKING, same as in `gnss_fix.py`.
+    # ------------------------------------------------------------------
+    from libigc.core import Flight
 
 class DegreeMinuteSecond(NamedTuple):
     """A named tuple to represent degrees, minutes and seconds."""

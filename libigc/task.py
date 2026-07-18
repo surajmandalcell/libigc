@@ -1,7 +1,17 @@
+from __future__ import annotations
+
 import xml.dom.minidom
 from collections import defaultdict
 
-from libigc import Flight
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # ------------------------------------------------------------------
+    # `Flight` is needed only for type hints. Importing it at runtime
+    # would make this module depend on the import order inside
+    # `libigc/__init__.py` (a circular import waiting to happen), so it
+    # is guarded behind TYPE_CHECKING, same as in `gnss_fix.py`.
+    # ------------------------------------------------------------------
+    from libigc.core import Flight
 from .lib import geo
 
 class Turnpoint:
@@ -72,8 +82,7 @@ class Task:
         # Open XML document using minidom parser
         DOMTree = xml.dom.minidom.parse(filename)
         task = DOMTree.documentElement
-        assert task is not None, "Task file is empty or not valid XML"
-        
+
         # Get the taskpoints, waypoints and time gate
         # TODO: add code to handle if these tags are missing.
         taskpoints = task.getElementsByTagName("taskpoints")[0]
