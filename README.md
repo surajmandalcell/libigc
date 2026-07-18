@@ -30,7 +30,7 @@ extract valuable information from glider flight data.
 
 ## Installation
 
-You can install libigc using pip:
+libigc requires Python 3.9 or newer. You can install it using pip:
 
 ```bash
 pip install libigc
@@ -181,7 +181,7 @@ Represents a single fix in the IGC file.
 - `lat`: Latitude in degrees.
 - `lon`: Longitude in degrees.
 - `alt`: Altitude in meters.
-- `ground_speed`: Ground speed in km/h.
+- `ground_speed`: Ground speed in km/h. (`gsp` is kept as a deprecated alias.)
 - `bearing`: Aircraft bearing in degrees.
 - `bearing_change_rate`: Rate of bearing change in degrees/second.
 - `flying`: Boolean indicating if the aircraft is flying at this fix.
