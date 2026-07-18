@@ -2,6 +2,7 @@ from enum import Enum
 import re
 import datetime
 import math
+import typing
 from pathlib import Path
 
 from .lib import viterbi
@@ -10,6 +11,17 @@ from .thermal import Thermal
 from .glide import Glide
 from .flight_parsing_config import FlightParsingConfig
 from .utils import _strip_non_printable_chars
+
+
+class _CirclingProgress(typing.NamedTuple):
+    first_fix: GNSSFix
+    distance: float
+
+
+class _GlidingProgress(typing.NamedTuple):
+    first_fix: GNSSFix
+    last_fix: GNSSFix
+    distance: float
 
 class Flight:
     """Parses IGC file, detects thermals and checks for record anomalies.
@@ -630,43 +642,43 @@ class Flight:
         landing_index = self.landing_fix.index
         flight_fixes = self.fixes[takeoff_index:landing_index + 1]
 
-        self.thermals = []
-        self.glides = []
-        circling_now = False
-        gliding_now = False
-        first_fix = None
-        first_glide_fix = None
-        last_glide_fix = None
-        distance = 0.0
+        self.thermals: list[Thermal] = []
+        self.glides: list[Glide] = []
+        circling: _CirclingProgress | None = None
+        gliding: _GlidingProgress | None = None
         for fix in flight_fixes:
-            if not circling_now and fix.circling:
+            if circling is None and fix.circling:
                 # Just started circling
-                circling_now = True
-                first_fix = fix
-                distance_start_circling = distance
-            elif circling_now and not fix.circling:
+                circling = _CirclingProgress(
+                    first_fix=fix,
+                    distance=gliding.distance if gliding is not None else 0.0,
+                )
+            elif circling is not None and not fix.circling:
                 # Just ended circling
-                circling_now = False
-                thermal = Thermal(first_fix, fix)
+                thermal = Thermal(circling.first_fix, fix)
                 if (thermal.time_change() >
                         self._config.min_time_for_thermal - 1e-5):
                     self.thermals.append(thermal)
                     # glide ends at start of thermal
-                    glide = Glide(first_glide_fix, first_fix,
-                                  distance_start_circling)
+                    glide = Glide(
+                        gliding.first_fix if gliding is not None else fix,
+                        circling.first_fix,
+                        circling.distance,
+                    )
                     self.glides.append(glide)
-                    gliding_now = False
+                    gliding = None
+                circling = None
 
-            if gliding_now:
-                distance = distance + fix.distance_to(last_glide_fix)
-                last_glide_fix = fix
+            if gliding is not None:
+                gliding = _GlidingProgress(
+                    first_fix=gliding.first_fix,
+                    last_fix=fix,
+                    distance=gliding.distance + fix.distance_to(gliding.last_fix),
+                )
             else:
                 # just started gliding
-                first_glide_fix = fix
-                last_glide_fix = fix
-                gliding_now = True
-                distance = 0.0
+                gliding = _GlidingProgress(first_fix=fix, last_fix=fix, distance=0.0)
 
-        if gliding_now:
-            glide = Glide(first_glide_fix, last_glide_fix, distance)
+        if gliding is not None:
+            glide = Glide(gliding.first_fix, gliding.last_fix, gliding.distance)
             self.glides.append(glide)
