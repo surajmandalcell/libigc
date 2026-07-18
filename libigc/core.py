@@ -1,4 +1,5 @@
-from enum import Enum
+from __future__ import annotations
+
 import re
 import datetime
 import math
@@ -22,6 +23,7 @@ class _GlidingProgress(typing.NamedTuple):
     first_fix: GNSSFix
     last_fix: GNSSFix
     distance: float
+
 
 class Flight:
     """Parses IGC file, detects thermals and checks for record anomalies.
@@ -65,7 +67,6 @@ class Flight:
     valid: bool
     notes: list[str]
     alt_source: AltitudeSource
-
 
     def __init__(self, fixes: list[GNSSFix], a_records: list, h_records: list, i_records: list, config: FlightParsingConfig):
         """Initializer of the Flight class. Do not use directly."""
@@ -168,7 +169,6 @@ class Flight:
                     pass
         flight = Flight(fixes, a_records, h_records, i_records, config)
         return flight
-
 
     def _parse_a_records(self, a_records):
         """Parses the IGC A record.
@@ -659,9 +659,16 @@ class Flight:
                 if (thermal.time_change() >
                         self._config.min_time_for_thermal - 1e-5):
                     self.thermals.append(thermal)
+                    # ----------------------------------------------------------
+                    # `gliding` can never be None here: it is assigned on every
+                    # loop iteration, and circling cannot end before the second
+                    # iteration. The assert documents the invariant and lets
+                    # type checkers narrow the Optional.
+                    # ----------------------------------------------------------
+                    assert gliding is not None
                     # glide ends at start of thermal
                     glide = Glide(
-                        gliding.first_fix if gliding is not None else fix,
+                        gliding.first_fix,
                         circling.first_fix,
                         circling.distance,
                     )
