@@ -1,41 +1,56 @@
-import collections
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
 import simplekml
-from pathlib2 import Path
+from pathlib import Path
+
+if TYPE_CHECKING:
+    # ------------------------------------------------------------------
+    # `Flight` is needed only for type hints. Importing it at runtime
+    # would make this module depend on the import order inside
+    # `libigc/__init__.py` (a circular import waiting to happen), so it
+    # is guarded behind TYPE_CHECKING, same as in `gnss_fix.py`.
+    # ------------------------------------------------------------------
+    from libigc.core import Flight
+
+class DegreeMinuteSecond(NamedTuple):
+    """A named tuple to represent degrees, minutes and seconds."""
+    hemisphere: str
+    degrees: float
+    minutes: float
+    seconds: float
 
 
-def _degrees_float_to_degrees_minutes_seconds(dd, lon_or_lat):
+def _degrees_float_to_degrees_minutes_seconds(dd: float, *, long: bool = False) -> DegreeMinuteSecond:
     """Converts from floating point degrees to degrees/minutes/seconds.
 
     Args:
         dd: a float, degrees to be converted
-        lon_or_lat: a string, argument used to calculate the hemisphere;
-        options are 'lon' - for longitude or 'lat' - for latitude
+        long: a bool, argument used to calculate the hemisphere; True for longitude, False for latitude
 
     Returns:
-        A namedtuple with hemisphere, degrees, minutes and floating point
+        A DegreeMinuteSecond namedtuple with hemisphere, degrees, minutes and floating point
         seconds elements.
     """
-    ddmmss = collections.namedtuple(
-        'ddmmss', ['hemisphere', 'degrees', 'minutes', 'seconds'])
     negative = dd < 0
     dd = abs(dd)
     minutes, seconds = divmod(dd * 3600, 60)
     degrees, minutes = divmod(minutes, 60)
-    if lon_or_lat == 'lon':
+    if long:
         hemisphere = 'E'
-    elif lon_or_lat == 'lat':
+    else:
         hemisphere = 'N'
 
     if negative:
-        if lon_or_lat == 'lon':
+        if long:
             hemisphere = 'W'
-        elif lon_or_lat == 'lat':
+        else:
             hemisphere = 'S'
 
-    return ddmmss(hemisphere, degrees, minutes, seconds)
+    return DegreeMinuteSecond(hemisphere, degrees, minutes, seconds)
 
 
-def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
+def dump_thermals_to_wpt_file(flight: Flight, wptfilename_local: str, endpoints: bool = False):
     """Dump flight's thermals to a .wpt file in Geo format.
 
     Args:
@@ -50,9 +65,9 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
 
         for x, thermal in enumerate(flight.thermals):
             lat = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lat, 'lat')
+                flight.thermals[x].enter_fix.lat, long=False)
             lon = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lon, 'lon')
+                flight.thermals[x].enter_fix.lon, long=True)
             wpt.write(u"%02d        " % x)
             wpt.write(u"%s %02d %02d %05.2f    " % (
                 lat.hemisphere, lat.degrees, lat.minutes, lat.seconds))
@@ -62,9 +77,9 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
 
             if endpoints:
                 lat = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lat, 'lat')
+                    flight.thermals[x].exit_fix.lat, long=False)
                 lon = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lon, 'lon')
+                    flight.thermals[x].exit_fix.lon, long=True)
                 wpt.write(u"%02dEND     " % x)
                 wpt.write(u"%s %02d %02d %05.2f    " % (
                     lat.hemisphere, lat.degrees, lat.minutes, lat.seconds))
@@ -74,7 +89,7 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
                     flight.thermals[x].exit_fix.gnss_alt))
 
 
-def dump_thermals_to_cup_file(flight, cup_filename_local):
+def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
     """Dump flight's thermals to a .cup file (SeeYou).
 
     Args:
@@ -87,8 +102,8 @@ def dump_thermals_to_cup_file(flight, cup_filename_local):
         wpt.write(u'lon,elev,style,rwdir,rwlen,freq,desc,userdata,pics\n')
 
         def write_fix(name, fix):
-            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, 'lat')
-            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, 'lon')
+            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, long=False)
+            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, long=True)
             wpt.write(u'"%s",,,%02d%02d.%03d%s,' % (
                 name, lat.degrees, lat.minutes,
                 int(round(lat.seconds/60.0*1000.0)), lat.hemisphere))
@@ -103,7 +118,7 @@ def dump_thermals_to_cup_file(flight, cup_filename_local):
             write_fix(u'%02d_END' % i, thermal.exit_fix)
 
 
-def dump_flight_to_kml(flight, kml_filename_local):
+def dump_flight_to_kml(flight: Flight, kml_filename_local: str):
     """Dumps the flight to KML format.
 
     Args:
@@ -127,11 +142,12 @@ def dump_flight_to_kml(flight, kml_filename_local):
     for i, thermal in enumerate(flight.thermals):
         add_point(name="thermal_%02d" % i, fix=thermal.enter_fix)
         add_point(name="thermal_%02d_END" % i, fix=thermal.exit_fix)
-        kml_filename = Path(kml_filename_local).expanduser().absolute()
+
+    kml_filename = Path(kml_filename_local).expanduser().absolute()
     kml.save(kml_filename.as_posix())
 
 
-def dump_flight_to_csv(flight, track_filename_local, thermals_filename_local):
+def dump_flight_to_csv(flight: Flight, track_filename_local: str, thermals_filename_local: str):
     """Dumps flight data to CSV files.
 
     Args:
@@ -142,12 +158,12 @@ def dump_flight_to_csv(flight, track_filename_local, thermals_filename_local):
     track_filename = Path(track_filename_local).expanduser().absolute()
     with track_filename.open('wt') as csv:
         csv.write(u"timestamp,lat,lon,bearing,bearing_change_rate,"
-                  u"gsp,flying,circling\n")
+                  u"ground_speed,flying,circling\n")
         for fix in flight.fixes:
             csv.write(u"%f,%f,%f,%f,%f,%f,%s,%s\n" % (
                 fix.timestamp, fix.lat, fix.lon,
                 fix.bearing, fix.bearing_change_rate,
-                fix.gsp, str(fix.flying), str(fix.circling)))
+                fix.ground_speed, str(fix.flying), str(fix.circling)))
 
     thermals_filename = Path(thermals_filename_local).expanduser().absolute()
     with thermals_filename.open('wt') as csv:

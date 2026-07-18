@@ -1,19 +1,29 @@
-from __future__ import print_function
+from __future__ import annotations
 
 import re
-import collections
 import datetime
 import math
-from pathlib2 import Path
+import typing
+from pathlib import Path
 
 from .lib import viterbi
-from .lib import geo
-from .gnss_fix import GNSSFix
+from .gnss_fix import GNSSFix, AltitudeSource
 from .thermal import Thermal
 from .glide import Glide
-from .task import Task, Turnpoint
 from .flight_parsing_config import FlightParsingConfig
-from .utils import _strip_non_printable_chars, _rawtime_float_to_hms
+from .utils import _strip_non_printable_chars
+
+
+class _CirclingProgress(typing.NamedTuple):
+    first_fix: GNSSFix
+    distance: float
+
+
+class _GlidingProgress(typing.NamedTuple):
+    first_fix: GNSSFix
+    last_fix: GNSSFix
+    distance: float
+
 
 class Flight:
     """Parses IGC file, detects thermals and checks for record anomalies.
@@ -51,6 +61,71 @@ class Flight:
         press_alt_valid: a bool, whether the pressure altitude sensor is OK
         gnss_alt_valid: a bool, whether the GNSS altitude sensor is OK
     """
+
+    fixes: list[GNSSFix]
+    _config: FlightParsingConfig
+    valid: bool
+    notes: list[str]
+    alt_source: AltitudeSource
+
+    def __init__(self, fixes: list[GNSSFix], a_records: list, h_records: list, i_records: list, config: FlightParsingConfig):
+        """Initializer of the Flight class. Do not use directly."""
+        self._config = config
+        self.fixes = fixes
+        self.valid = True
+        self.notes = []
+        if len(fixes) < self._config.min_fixes:
+            self.notes.append(
+                "Error: This file has %d fixes, less than "
+                "the minimum %d." % (len(fixes), self._config.min_fixes))
+            self.valid = False
+            return
+
+        self._check_altitudes()
+        if not self.valid:
+            return
+
+        self._check_fix_rawtime()
+        if not self.valid:
+            return
+
+        if self.press_alt_valid:
+            self.alt_source = AltitudeSource.PRESSURE
+        elif self.gnss_alt_valid:
+            self.alt_source = AltitudeSource.GNSS
+        else:
+            self.notes.append(
+                "Error: neither pressure nor gnss altitude is valid.")
+            self.valid = False
+            return
+
+        if a_records:
+            self._parse_a_records(a_records)
+        if i_records:
+            self._parse_i_records(i_records)
+        if h_records:
+            self._parse_h_records(h_records)
+
+        if not hasattr(self, 'date_timestamp'):
+            self.notes.append("Error: no date record (HFDTE) in the file")
+            self.valid = False
+            return
+
+        for fix in self.fixes:
+            fix.set_flight(self)
+
+        self._compute_ground_speeds()
+        self._compute_flight()
+        self._compute_takeoff_landing()
+        if not hasattr(self, 'takeoff_fix'):
+            self.notes.append("Error: did not detect takeoff.")
+            self.valid = False
+            return
+
+        self._compute_bearings()
+        self._compute_bearing_change_rates()
+        self._compute_circling()
+        self._find_thermals()
 
     @staticmethod
     def create_from_file(filename, config_class=FlightParsingConfig):
@@ -94,65 +169,6 @@ class Flight:
                     pass
         flight = Flight(fixes, a_records, h_records, i_records, config)
         return flight
-
-    def __init__(self, fixes, a_records, h_records, i_records, config):
-        """Initializer of the Flight class. Do not use directly."""
-        self._config = config
-        self.fixes = fixes
-        self.valid = True
-        self.notes = []
-        if len(fixes) < self._config.min_fixes:
-            self.notes.append(
-                "Error: This file has %d fixes, less than "
-                "the minimum %d." % (len(fixes), self._config.min_fixes))
-            self.valid = False
-            return
-
-        self._check_altitudes()
-        if not self.valid:
-            return
-
-        self._check_fix_rawtime()
-        if not self.valid:
-            return
-
-        if self.press_alt_valid:
-            self.alt_source = "PRESS"
-        elif self.gnss_alt_valid:
-            self.alt_source = "GNSS"
-        else:
-            self.notes.append(
-                "Error: neither pressure nor gnss altitude is valid.")
-            self.valid = False
-            return
-
-        if a_records:
-            self._parse_a_records(a_records)
-        if i_records:
-            self._parse_i_records(i_records)
-        if h_records:
-            self._parse_h_records(h_records)
-
-        if not hasattr(self, 'date_timestamp'):
-            self.notes.append("Error: no date record (HFDTE) in the file")
-            self.valid = False
-            return
-
-        for fix in self.fixes:
-            fix.set_flight(self)
-
-        self._compute_ground_speeds()
-        self._compute_flight()
-        self._compute_takeoff_landing()
-        if not hasattr(self, 'takeoff_fix'):
-            self.notes.append("Error: did not detect takeoff.")
-            self.valid = False
-            return
-
-        self._compute_bearings()
-        self._compute_bearing_change_rates()
-        self._compute_circling()
-        self._find_thermals()
 
     def _parse_a_records(self, a_records):
         """Parses the IGC A record.
@@ -380,14 +396,14 @@ class Flight:
 
     def _compute_ground_speeds(self):
         """Adds ground speed info (km/h) to self.fixes."""
-        self.fixes[0].gsp = 0.0
+        self.fixes[0].ground_speed = 0.0
         for i in range(1, len(self.fixes)):
             dist = self.fixes[i].distance_to(self.fixes[i-1])
             rawtime = self.fixes[i].rawtime - self.fixes[i-1].rawtime
             if math.fabs(rawtime) < 1e-5:
-                self.fixes[i].gsp = 0.0
+                self.fixes[i].ground_speed = 0.0
             else:
-                self.fixes[i].gsp = dist/rawtime*3600.0
+                self.fixes[i].ground_speed = dist/rawtime*3600.0
 
     def _flying_emissions(self):
         """Generates raw flying/not flying emissions from ground speed.
@@ -398,7 +414,7 @@ class Flight:
         """
         emissions = []
         for fix in self.fixes:
-            if fix.gsp > self._config.min_gsp_flight:
+            if fix.ground_speed > self._config.min_gsp_flight:
                 emissions.append(1)
             else:
                 emissions.append(0)
@@ -626,43 +642,50 @@ class Flight:
         landing_index = self.landing_fix.index
         flight_fixes = self.fixes[takeoff_index:landing_index + 1]
 
-        self.thermals = []
-        self.glides = []
-        circling_now = False
-        gliding_now = False
-        first_fix = None
-        first_glide_fix = None
-        last_glide_fix = None
-        distance = 0.0
+        self.thermals: list[Thermal] = []
+        self.glides: list[Glide] = []
+        circling: _CirclingProgress | None = None
+        gliding: _GlidingProgress | None = None
         for fix in flight_fixes:
-            if not circling_now and fix.circling:
+            if circling is None and fix.circling:
                 # Just started circling
-                circling_now = True
-                first_fix = fix
-                distance_start_circling = distance
-            elif circling_now and not fix.circling:
+                circling = _CirclingProgress(
+                    first_fix=fix,
+                    distance=gliding.distance if gliding is not None else 0.0,
+                )
+            elif circling is not None and not fix.circling:
                 # Just ended circling
-                circling_now = False
-                thermal = Thermal(first_fix, fix)
+                thermal = Thermal(circling.first_fix, fix)
                 if (thermal.time_change() >
                         self._config.min_time_for_thermal - 1e-5):
                     self.thermals.append(thermal)
+                    # ----------------------------------------------------------
+                    # `gliding` can never be None here: it is assigned on every
+                    # loop iteration, and circling cannot end before the second
+                    # iteration. The assert documents the invariant and lets
+                    # type checkers narrow the Optional.
+                    # ----------------------------------------------------------
+                    assert gliding is not None
                     # glide ends at start of thermal
-                    glide = Glide(first_glide_fix, first_fix,
-                                  distance_start_circling)
+                    glide = Glide(
+                        gliding.first_fix,
+                        circling.first_fix,
+                        circling.distance,
+                    )
                     self.glides.append(glide)
-                    gliding_now = False
+                    gliding = None
+                circling = None
 
-            if gliding_now:
-                distance = distance + fix.distance_to(last_glide_fix)
-                last_glide_fix = fix
+            if gliding is not None:
+                gliding = _GlidingProgress(
+                    first_fix=gliding.first_fix,
+                    last_fix=fix,
+                    distance=gliding.distance + fix.distance_to(gliding.last_fix),
+                )
             else:
                 # just started gliding
-                first_glide_fix = fix
-                last_glide_fix = fix
-                gliding_now = True
-                distance = 0.0
+                gliding = _GlidingProgress(first_fix=fix, last_fix=fix, distance=0.0)
 
-        if gliding_now:
-            glide = Glide(first_glide_fix, last_glide_fix, distance)
+        if gliding is not None:
+            glide = Glide(gliding.first_fix, gliding.last_fix, gliding.distance)
             self.glides.append(glide)

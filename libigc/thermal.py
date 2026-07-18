@@ -1,4 +1,5 @@
 import math
+from libigc.gnss_fix import GNSSFix
 from libigc.utils import _rawtime_float_to_hms
 
 class Thermal:
@@ -8,7 +9,10 @@ class Thermal:
         enter_fix: a GNSSFix, entry point of the thermal
         exit_fix: a GNSSFix, exit point of the thermal
     """
-    def __init__(self, enter_fix, exit_fix):
+    enter_fix: GNSSFix
+    exit_fix: GNSSFix
+
+    def __init__(self, enter_fix: GNSSFix, exit_fix: GNSSFix):
         self.enter_fix = enter_fix
         self.exit_fix = exit_fix
 

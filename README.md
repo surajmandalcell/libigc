@@ -16,7 +16,9 @@
 
 ## Introduction
 
-libigc is a Python library designed to parse and analyze IGC (International Gliding Commission) flight recorder logs. It provides functionality to detect thermals, analyze flight patterns, and extract valuable information from glider flight data.
+libigc is a Python library designed to parse and analyze IGC (International Gliding Commission)
+flight recorder logs. It provides functionality to detect thermals, analyze flight patterns, and
+extract valuable information from glider flight data.
 
 ### Features
 - Parses IGC files and extracts flight data
@@ -28,7 +30,7 @@ libigc is a Python library designed to parse and analyze IGC (International Glid
 
 ## Installation
 
-You can install libigc using pip:
+libigc requires Python 3.9 or newer. You can install it using pip:
 
 ```bash
 pip install libigc
@@ -36,7 +38,8 @@ pip install libigc
 
 ## Basic Usage
 
-Here's a simple example of how to use libigc to parse an IGC file and extract basic flight information:
+Here's a simple example of how to use libigc to parse an IGC file and extract basic flight
+information:
 
 ```python
 from libigc import Flight
@@ -178,7 +181,7 @@ Represents a single fix in the IGC file.
 - `lat`: Latitude in degrees.
 - `lon`: Longitude in degrees.
 - `alt`: Altitude in meters.
-- `gsp`: Ground speed in km/h.
+- `ground_speed`: Ground speed in km/h. (`gsp` is kept as a deprecated alias.)
 - `bearing`: Aircraft bearing in degrees.
 - `bearing_change_rate`: Rate of bearing change in degrees/second.
 - `flying`: Boolean indicating if the aircraft is flying at this fix.
@@ -240,7 +243,8 @@ Represents a single turnpoint in a task.
 
 ## Contributing
 
-If you find an IGC file that libigc doesn't handle correctly, please open an issue on the GitHub repository. Include the problematic IGC file and a description of the expected behavior.
+If you find an IGC file that libigc doesn't handle correctly, please open an issue on the GitHub
+repository. Include the problematic IGC file and a description of the expected behavior.
 
 To contribute code:
 

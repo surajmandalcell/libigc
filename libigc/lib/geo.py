@@ -3,7 +3,7 @@ import math
 EARTH_RADIUS_KM = 6371.0
 
 
-def sphere_distance(lat1, lon1, lat2, lon2):
+def sphere_distance(lat1: float, lon1: float, lat2: float, lon2: float):
     """Computes the great circle distance on a unit sphere.
 
     All angles and the return value are in radians.
@@ -24,7 +24,7 @@ def sphere_distance(lat1, lon1, lat2, lon2):
     return 2.0 * math.asin(math.sqrt(a))
 
 
-def earth_distance(lat1, lon1, lat2, lon2):
+def earth_distance(lat1: float, lon1: float, lat2: float, lon2: float):
     """Computes Earth distance between two points, in kilometers.
 
     Input angles are in degrees, WGS-84. Output is in kilometers.

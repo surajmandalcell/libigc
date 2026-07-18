@@ -1,5 +1,10 @@
+import os
+import tempfile
 import unittest
 
+from libigc.task import Task
+from libigc.lib import dumpers, viterbi
+from libigc.utils import _rawtime_float_to_hms
 from libigc import core as libigc
 
 from tests.test_utils import get_test_data_path
@@ -69,7 +74,7 @@ class TestNapretTaskParsing(unittest.TestCase):
 
     def setUp(self):
         test_file = get_test_data_path("napret.lkt")
-        self.task = libigc.Task.create_from_lkt_file(test_file)
+        self.task = Task.create_from_lkt_file(test_file)
 
     def testTaskHasStartTime(self):
         self.assertAlmostEqual(self.task.start_time, 12 * 3600)
@@ -303,3 +308,62 @@ class TestWhichFlightToPick(unittest.TestCase):
         self.assertLess(
             flight_first.landing_fix.timestamp, flight_concat.landing_fix.timestamp
         )
+
+
+# ----------------------------------------------------------------------
+# Regression tests for bugs fixed during the 2026 cleanup:
+#   1. viterbi: decode() aliased the decoder's initial distribution and
+#      mutated it, so a second decode() on the same instance returned
+#      garbage.
+#   2. _rawtime_float_to_hms: used true division, so hours/minutes came
+#      back as floats (e.g. hours=3.5).
+#   3. dump_flight_to_kml: the output filename was assigned inside the
+#      thermals loop, so a flight with zero thermals raised NameError.
+#   4. GNSSFix.gsp was renamed to ground_speed; the old name must keep
+#      working as a deprecated alias.
+# ----------------------------------------------------------------------
+
+class TestViterbiDecodeIsRepeatable(unittest.TestCase):
+
+    def testTwoDecodesOnSameInstanceGiveSameResult(self):
+        decoder = viterbi.SimpleViterbiDecoder(
+            init_probs=[0.5, 0.5],
+            transition_probs=[[0.9, 0.1], [0.1, 0.9]],
+            emission_probs=[[0.8, 0.2], [0.2, 0.8]])
+        emissions = [0, 1, 1, 0, 1, 1, 1, 0, 0, 1]
+        first = decoder.decode(emissions)
+        second = decoder.decode(emissions)
+        self.assertEqual(first, second)
+
+
+class TestRawtimeFloatToHms(unittest.TestCase):
+
+    def testReturnsIntegerParts(self):
+        hms = _rawtime_float_to_hms(3.5 * 3600 + 10)  # 03:30:10
+        self.assertEqual((hms.hours, hms.minutes, hms.seconds), (3, 30, 10))
+        self.assertIsInstance(hms.hours, int)
+        self.assertIsInstance(hms.minutes, int)
+        self.assertIsInstance(hms.seconds, int)
+
+
+class TestKmlDumpWithoutThermals(unittest.TestCase):
+
+    def testDumpFlightWithNoThermalsWritesFile(self):
+        flight = libigc.Flight.create_from_file(
+            get_test_data_path("napret.igc"))
+        self.assertTrue(flight.valid)
+        flight.thermals = []
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            kml_path = os.path.join(tmp_dir, "no_thermals.kml")
+            dumpers.dump_flight_to_kml(flight, kml_path)
+            self.assertTrue(os.path.exists(kml_path))
+
+
+class TestGspAlias(unittest.TestCase):
+
+    def testGspIsAliasForGroundSpeed(self):
+        flight = libigc.Flight.create_from_file(
+            get_test_data_path("napret.igc"))
+        self.assertTrue(flight.valid)
+        fix = flight.fixes[100]
+        self.assertEqual(fix.gsp, fix.ground_speed)

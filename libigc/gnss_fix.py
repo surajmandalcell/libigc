@@ -1,7 +1,23 @@
+from __future__ import annotations
+
+from enum import Enum
 import re
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # `core` imports `GNSSFix`, and we need `Flight` for type hinting.
+    # This if TYPE_CHECKING block avoids circular import issues.
+    from libigc.core import Flight
 from .lib import geo
 from libigc.utils import _rawtime_float_to_hms
 
+class FixValidity(str, Enum):
+    A = "A"  # valid 3D fix
+    V = "V"  # nav warning (2D fix or position may be unreliable)
+
+class AltitudeSource(str, Enum):
+    PRESSURE = "PRESS"
+    GNSS = "GNSS"
 
 class GNSSFix:
     """Stores single GNSS flight recorder fix (a B-record).
@@ -10,7 +26,7 @@ class GNSSFix:
         rawtime: a float, time since last midnight, UTC, seconds
         lat: a float, latitude in degrees
         lon: a float, longitude in degrees
-        validity: a string, GPS validity information from flight recorder
+        validity: a FixValidity, GPS validity information from flight recorder
         press_alt: a float, pressure altitude, meters
         gnss_alt: a float, GNSS altitude, meters
         extras: a string, B record extensions
@@ -19,15 +35,24 @@ class GNSSFix:
         index: an integer, the position of the fix in the IGC file
         timestamp: a float, true timestamp (since epoch), UTC, seconds
         alt: a float, either press_alt or gnss_alt
-        gsp: a float, current ground speed, km/h
+        ground_speed: a float, current ground speed, km/h
         bearing: a float, aircraft bearing, in degrees
         bearing_change_rate: a float, bearing change rate, degrees/second
         flying: a bool, whether this fix is during a flight
         circling: a bool, whether this fix is inside a thermal
     """
 
+    index: int
+    timestamp: float
+    alt: float
+    ground_speed: float
+    bearing: float
+    bearing_change_rate: float
+    flying: bool
+    circling: bool
+
     @staticmethod
-    def build_from_B_record(B_record_line, index):
+    def build_from_B_record(B_record_line: str, index: int) -> GNSSFix | None:
         """Creates GNSSFix object from IGC B-record line.
 
         Args:
@@ -35,7 +60,8 @@ class GNSSFix:
             index: the zero-based position of the fix in the parent IGC file
 
         Returns:
-            The created GNSSFix object
+            The created GNSSFix object, or None if the line is not
+            a valid B record.
         """
         match = re.match(
             r"^B"
@@ -73,11 +99,13 @@ class GNSSFix:
         press_alt = float(press_alt)
         gnss_alt = float(gnss_alt)
 
-        return GNSSFix(rawtime, lat, lon, validity, press_alt, gnss_alt,
+        fix_validity = FixValidity(validity)
+
+        return GNSSFix(rawtime, lat, lon, fix_validity, press_alt, gnss_alt,
                        index, extras)
 
-    def __init__(self, rawtime, lat, lon, validity, press_alt, gnss_alt,
-                 index, extras):
+    def __init__(self, rawtime: float, lat: float, lon: float, validity: FixValidity, press_alt: float, gnss_alt: float,
+                 index: int, extras: str):
         """Initializer of GNSSFix. Not meant to be used directly."""
         self.rawtime = rawtime
         self.lat = lat
@@ -89,12 +117,22 @@ class GNSSFix:
         self.extras = extras
         self.flight = None
 
-    def set_flight(self, flight):
+    # ------------------------------------------------------------------
+    # Backwards compatibility: this attribute was called `gsp` before it
+    # was renamed to `ground_speed`. Keep the old name as a read-only
+    # alias so existing user code does not break; remove in a future
+    # major release.
+    # ------------------------------------------------------------------
+    @property
+    def gsp(self) -> float:
+        return self.ground_speed
+
+    def set_flight(self, flight: Flight):
         """Sets parent Flight object."""
         self.flight = flight
-        if self.flight.alt_source == "PRESS":
+        if self.flight.alt_source == AltitudeSource.PRESSURE:
             self.alt = self.press_alt
-        elif self.flight.alt_source == "GNSS":
+        elif self.flight.alt_source == AltitudeSource.GNSS:
             self.alt = self.gnss_alt
         else:
             assert(False)
@@ -109,11 +147,11 @@ class GNSSFix:
             (_rawtime_float_to_hms(self.rawtime) +
              (self.lat, self.lon, self.press_alt, self.gnss_alt)))
 
-    def bearing_to(self, other):
+    def bearing_to(self, other: GNSSFix):
         """Computes bearing in degrees to another GNSSFix."""
         return geo.bearing_to(self.lat, self.lon, other.lat, other.lon)
 
-    def distance_to(self, other):
+    def distance_to(self, other: GNSSFix):
         """Computes great circle distance in kilometers to another GNSSFix."""
         return geo.earth_distance(self.lat, self.lon, other.lat, other.lon)
 
