@@ -12,8 +12,8 @@ from .lib import geo
 from libigc.utils import _rawtime_float_to_hms
 
 class FixValidity(str, Enum):
-    A = "A" # 3D Fix
-    V = "V" # 2D fix
+    A = "A"  # valid 3D fix
+    V = "V"  # nav warning (2D fix or position may be unreliable)
 
 class AltitudeSource(str, Enum):
     PRESSURE = "PRESS"
@@ -26,7 +26,7 @@ class GNSSFix:
         rawtime: a float, time since last midnight, UTC, seconds
         lat: a float, latitude in degrees
         lon: a float, longitude in degrees
-        validity: a string, GPS validity information from flight recorder
+        validity: a FixValidity, GPS validity information from flight recorder
         press_alt: a float, pressure altitude, meters
         gnss_alt: a float, GNSS altitude, meters
         extras: a string, B record extensions
@@ -52,7 +52,7 @@ class GNSSFix:
     circling: bool
 
     @staticmethod
-    def build_from_B_record(B_record_line: str, index: int):
+    def build_from_B_record(B_record_line: str, index: int) -> GNSSFix | None:
         """Creates GNSSFix object from IGC B-record line.
 
         Args:
@@ -60,7 +60,8 @@ class GNSSFix:
             index: the zero-based position of the fix in the parent IGC file
 
         Returns:
-            The created GNSSFix object
+            The created GNSSFix object, or None if the line is not
+            a valid B record.
         """
         match = re.match(
             r"^B"
@@ -100,12 +101,11 @@ class GNSSFix:
 
         fix_validity = FixValidity(validity)
 
-
         return GNSSFix(rawtime, lat, lon, fix_validity, press_alt, gnss_alt,
                        index, extras)
- 
+
     def __init__(self, rawtime: float, lat: float, lon: float, validity: FixValidity, press_alt: float, gnss_alt: float,
-                 index: int, extras: str,):
+                 index: int, extras: str):
         """Initializer of GNSSFix. Not meant to be used directly."""
         self.rawtime = rawtime
         self.lat = lat
@@ -116,6 +116,16 @@ class GNSSFix:
         self.index = index
         self.extras = extras
         self.flight = None
+
+    # ------------------------------------------------------------------
+    # Backwards compatibility: this attribute was called `gsp` before it
+    # was renamed to `ground_speed`. Keep the old name as a read-only
+    # alias so existing user code does not break; remove in a future
+    # major release.
+    # ------------------------------------------------------------------
+    @property
+    def gsp(self) -> float:
+        return self.ground_speed
 
     def set_flight(self, flight: Flight):
         """Sets parent Flight object."""
