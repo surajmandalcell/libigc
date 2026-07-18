@@ -149,12 +149,12 @@ def dump_flight_to_csv(flight: Flight, track_filename_local: str, thermals_filen
     track_filename = Path(track_filename_local).expanduser().absolute()
     with track_filename.open('wt') as csv:
         csv.write(u"timestamp,lat,lon,bearing,bearing_change_rate,"
-                  u"gsp,flying,circling\n")
+                  u"ground_speed,flying,circling\n")
         for fix in flight.fixes:
             csv.write(u"%f,%f,%f,%f,%f,%f,%s,%s\n" % (
                 fix.timestamp, fix.lat, fix.lon,
                 fix.bearing, fix.bearing_change_rate,
-                fix.gsp, str(fix.flying), str(fix.circling)))
+                fix.ground_speed, str(fix.flying), str(fix.circling)))
 
     thermals_filename = Path(thermals_filename_local).expanduser().absolute()
     with thermals_filename.open('wt') as csv:

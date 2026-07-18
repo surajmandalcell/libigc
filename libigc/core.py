@@ -384,14 +384,14 @@ class Flight:
 
     def _compute_ground_speeds(self):
         """Adds ground speed info (km/h) to self.fixes."""
-        self.fixes[0].gsp = 0.0
+        self.fixes[0].ground_speed = 0.0
         for i in range(1, len(self.fixes)):
             dist = self.fixes[i].distance_to(self.fixes[i-1])
             rawtime = self.fixes[i].rawtime - self.fixes[i-1].rawtime
             if math.fabs(rawtime) < 1e-5:
-                self.fixes[i].gsp = 0.0
+                self.fixes[i].ground_speed = 0.0
             else:
-                self.fixes[i].gsp = dist/rawtime*3600.0
+                self.fixes[i].ground_speed = dist/rawtime*3600.0
 
     def _flying_emissions(self):
         """Generates raw flying/not flying emissions from ground speed.
@@ -402,7 +402,7 @@ class Flight:
         """
         emissions = []
         for fix in self.fixes:
-            if fix.gsp > self._config.min_gsp_flight:
+            if fix.ground_speed > self._config.min_gsp_flight:
                 emissions.append(1)
             else:
                 emissions.append(0)

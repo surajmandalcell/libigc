@@ -35,12 +35,21 @@ class GNSSFix:
         index: an integer, the position of the fix in the IGC file
         timestamp: a float, true timestamp (since epoch), UTC, seconds
         alt: a float, either press_alt or gnss_alt
-        gsp: a float, current ground speed, km/h
+        ground_speed: a float, current ground speed, km/h
         bearing: a float, aircraft bearing, in degrees
         bearing_change_rate: a float, bearing change rate, degrees/second
         flying: a bool, whether this fix is during a flight
         circling: a bool, whether this fix is inside a thermal
     """
+
+    index: int
+    timestamp: float
+    alt: float
+    ground_speed: float
+    bearing: float
+    bearing_change_rate: float
+    flying: bool
+    circling: bool
 
     @staticmethod
     def build_from_B_record(B_record_line: str, index: int):
