@@ -1,6 +1,6 @@
 import collections
 import simplekml
-from pathlib2 import Path
+from pathlib import Path
 
 
 def _degrees_float_to_degrees_minutes_seconds(dd, lon_or_lat):

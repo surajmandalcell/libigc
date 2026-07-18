@@ -2,7 +2,7 @@ from enum import Enum
 import re
 import datetime
 import math
-from pathlib2 import Path
+from pathlib import Path
 
 from .lib import viterbi
 from .gnss_fix import GNSSFix, AltitudeSource

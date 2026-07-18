@@ -29,7 +29,6 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "simplekml>=1.3.1",
-        "pathlib2>=2.1.0",
     ],
     keywords="igc gliding soaring flight-analysis thermal-detection",
 )
