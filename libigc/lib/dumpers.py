@@ -2,6 +2,8 @@ from typing import NamedTuple
 import simplekml
 from pathlib import Path
 
+from libigc.core import Flight
+
 class DegreeMinuteSecond(NamedTuple):
     """A named tuple to represent degrees, minutes and seconds."""
     hemisphere: str
@@ -39,7 +41,7 @@ def _degrees_float_to_degrees_minutes_seconds(dd: float, *, long: bool = False) 
     return DegreeMinuteSecond(hemisphere, degrees, minutes, seconds)
 
 
-def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
+def dump_thermals_to_wpt_file(flight: Flight, wptfilename_local: str, endpoints: bool = False):
     """Dump flight's thermals to a .wpt file in Geo format.
 
     Args:
@@ -78,7 +80,7 @@ def dump_thermals_to_wpt_file(flight, wptfilename_local, endpoints=False):
                     flight.thermals[x].exit_fix.gnss_alt))
 
 
-def dump_thermals_to_cup_file(flight, cup_filename_local):
+def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
     """Dump flight's thermals to a .cup file (SeeYou).
 
     Args:
@@ -107,7 +109,7 @@ def dump_thermals_to_cup_file(flight, cup_filename_local):
             write_fix(u'%02d_END' % i, thermal.exit_fix)
 
 
-def dump_flight_to_kml(flight, kml_filename_local):
+def dump_flight_to_kml(flight: Flight, kml_filename_local: str):
     """Dumps the flight to KML format.
 
     Args:
@@ -131,12 +133,12 @@ def dump_flight_to_kml(flight, kml_filename_local):
     for i, thermal in enumerate(flight.thermals):
         add_point(name="thermal_%02d" % i, fix=thermal.enter_fix)
         add_point(name="thermal_%02d_END" % i, fix=thermal.exit_fix)
-        
+
     kml_filename = Path(kml_filename_local).expanduser().absolute()
     kml.save(kml_filename.as_posix())
 
 
-def dump_flight_to_csv(flight, track_filename_local, thermals_filename_local):
+def dump_flight_to_csv(flight: Flight, track_filename_local: str, thermals_filename_local: str):
     """Dumps flight data to CSV files.
 
     Args:
