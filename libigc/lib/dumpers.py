@@ -131,7 +131,8 @@ def dump_flight_to_kml(flight, kml_filename_local):
     for i, thermal in enumerate(flight.thermals):
         add_point(name="thermal_%02d" % i, fix=thermal.enter_fix)
         add_point(name="thermal_%02d_END" % i, fix=thermal.exit_fix)
-        kml_filename = Path(kml_filename_local).expanduser().absolute()
+        
+    kml_filename = Path(kml_filename_local).expanduser().absolute()
     kml.save(kml_filename.as_posix())
 
 
