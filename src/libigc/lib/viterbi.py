@@ -8,7 +8,12 @@ class SimpleViterbiDecoder(object):
     states and the emissions are represented by 0 and 1.
     """
 
-    def __init__(self, init_probs: list[float], transition_probs: list[list[float]], emission_probs: list[list[float]]):
+    def __init__(
+        self,
+        init_probs: list[float],
+        transition_probs: list[list[float]],
+        emission_probs: list[list[float]],
+    ):
         """Initializer for the class.
 
         Args:

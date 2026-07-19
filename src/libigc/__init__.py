@@ -7,7 +7,15 @@ from .glide import Glide
 from .task import Task, Turnpoint
 from .flight_parsing_config import FlightParsingConfig
 
-__all__ = ['Flight', 'GNSSFix', 'Thermal', 'Glide', 'Task', 'Turnpoint', 'FlightParsingConfig']
+__all__ = [
+    "Flight",
+    "GNSSFix",
+    "Thermal",
+    "Glide",
+    "Task",
+    "Turnpoint",
+    "FlightParsingConfig",
+]
 
 
 __version__ = "1.1.0"

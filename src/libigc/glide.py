@@ -45,7 +45,11 @@ class Glide:
     def __str__(self):
         hms = _rawtime_float_to_hms(self.time_change())
         return (
-            ("Glide(dist=%.2f km, avg_speed=%.2f kph, "
-             "avg L/D=%.2f duration=%dm %ds)") % (
-                self.track_length, self.speed(), self.glide_ratio(),
-                hms.minutes, hms.seconds))
+            "Glide(dist=%.2f km, avg_speed=%.2f kph, avg L/D=%.2f duration=%dm %ds)"
+        ) % (
+            self.track_length,
+            self.speed(),
+            self.glide_ratio(),
+            hms.minutes,
+            hms.seconds,
+        )

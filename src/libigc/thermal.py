@@ -2,6 +2,7 @@ import math
 from libigc.gnss_fix import GNSSFix
 from libigc.utils import _rawtime_float_to_hms
 
+
 class Thermal:
     """Represents a single thermal detected in a flight.
 
@@ -9,6 +10,7 @@ class Thermal:
         enter_fix: a GNSSFix, entry point of the thermal
         exit_fix: a GNSSFix, exit point of the thermal
     """
+
     enter_fix: GNSSFix
     exit_fix: GNSSFix
 
@@ -35,5 +37,8 @@ class Thermal:
 
     def __str__(self):
         hms = _rawtime_float_to_hms(self.time_change())
-        return ("Thermal(vertical_velocity=%.2f m/s, duration=%dm %ds)" %
-                (self.vertical_velocity(), hms.minutes, hms.seconds))
+        return "Thermal(vertical_velocity=%.2f m/s, duration=%dm %ds)" % (
+            self.vertical_velocity(),
+            hms.minutes,
+            hms.seconds,
+        )

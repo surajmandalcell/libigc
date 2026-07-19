@@ -1,5 +1,4 @@
-
-class FlightParsingConfig(object):
+class FlightParsingConfig:
     """Configuration for parsing an IGC file.
 
     Defines a set of parameters used to validate a file, and to detect
@@ -81,4 +80,3 @@ class FlightParsingConfig(object):
 
     # Minimum time to consider circling a thermal, seconds.
     min_time_for_thermal = 60.0
-
