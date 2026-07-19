@@ -82,6 +82,7 @@ class Task:
         # Open XML document using minidom parser
         DOMTree = xml.dom.minidom.parse(filename)
         task = DOMTree.documentElement
+        assert isinstance(task, xml.dom.minidom.Element), "The task file is not valid XML"
 
         # Get the taskpoints, waypoints and time gate
         # TODO: add code to handle if these tags are missing.
