@@ -161,7 +161,10 @@ class GNSSFix:
         elif self.flight.alt_source == AltitudeSource.GNSS:
             self.alt = self.gnss_alt
         else:
-            assert False
+            # This should never happen, but just in case, raise an exception.
+            raise ValueError(
+                f"Unknown altitude source: {self.flight.alt_source}."
+            )
         self.timestamp = self.rawtime + flight.date_timestamp
 
     def __repr__(self):

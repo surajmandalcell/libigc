@@ -153,7 +153,7 @@ class Flight:
         abs_filename = Path(filename).expanduser().absolute()
         with abs_filename.open("r", encoding="ISO-8859-1") as flight_file:
             for line in flight_file:
-                line = line.replace(r"\n", "").replace(r"\r", "")
+                line = line.replace("\n", "").replace("\r", "")
                 if not line:
                     continue
                 if line[0] == "A":
