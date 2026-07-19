@@ -47,7 +47,7 @@ class Turnpoint:
             "End_of_speed_section",
             "goal_cylinder",
             "goal_line",
-        ], "turnpoint type is not valid: %r" % kind
+        ], f"turnpoint type is not valid: {kind}"
 
     def in_radius(self, fix):
         """Checks whether the provided GNSSFix is within the radius"""
@@ -209,6 +209,8 @@ class Task:
                     reached_turnpoints.append(fix)
                     t += 1
             else:
-                assert False, "Unknown turnpoint kind: %s" % self.turnpoints[t].kind
+                raise ValueError(
+                    f"Unknown turnpoint kind: {self.turnpoints[t].kind}"
+                )
 
         return reached_turnpoints
