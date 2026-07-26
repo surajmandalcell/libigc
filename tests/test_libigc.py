@@ -81,6 +81,15 @@ class TestBuildFromBRecord(unittest.TestCase):
 
         self.assertEqual(record, b_record.to_B_record())
 
+    def testToBRecordWrapsPastMidnight(self):
+        # Flight._check_fix_rawtime pushes rawtime past 86400 for flights that
+        # cross 0:00 UTC. A B record only has room for a time of day, so the
+        # hour has to wrap rather than be written out as "24".
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
+        b_record.rawtime += 24 * 3600
+
+        self.assertEqual(self.test_record, b_record.to_B_record())
+
 
 class TestNapretTaskParsing(unittest.TestCase):
     def setUp(self):

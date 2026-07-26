@@ -186,32 +186,25 @@ class GNSSFix:
 
     def to_B_record(self):
         """Reconstructs an IGC B-record."""
-        rawtime = int(self.rawtime)
-        hours = rawtime / 3600
-        minutes = (rawtime % 3600) / 60
-        seconds = rawtime % 60
+        # A B record carries a bare HHMMSS wall clock with no date, so the
+        # time of day is all that fits. `rawtime` keeps counting past 86400
+        # for flights that cross 0:00 UTC (see Flight._check_fix_rawtime), and
+        # writing that out unwrapped produces an invalid hour such as "24".
+        rawtime = int(self.rawtime) % (24 * 3600)
+        hours, rawtime = divmod(rawtime, 3600)
+        minutes, seconds = divmod(rawtime, 60)
 
-        if self.lat < 0.0:
-            lat = -self.lat
-            lat_sign = "S"
-        else:
-            lat = self.lat
-            lat_sign = "N"
-        lat = int(round(lat * 60000.0))
-        lat_deg = lat / 60000
-        lat_min = (lat % 60000) / 1000
-        lat_min_dec = lat % 1000
+        # Both coordinates are rounded once, into thousandths of a minute,
+        # and split with integer arithmetic from there, so a value just under
+        # a whole minute carries into the minutes and degrees instead of
+        # overflowing the three digit field.
+        lat_sign = "S" if self.lat < 0.0 else "N"
+        lat_deg, rest = divmod(int(round(abs(self.lat) * 60000.0)), 60000)
+        lat_min, lat_min_dec = divmod(rest, 1000)
 
-        if self.lon < 0.0:
-            lon = -self.lon
-            lon_sign = "W"
-        else:
-            lon = self.lon
-            lon_sign = "E"
-        lon = int(round(lon * 60000.0))
-        lon_deg = lon / 60000
-        lon_min = (lon % 60000) / 1000
-        lon_min_dec = lon % 1000
+        lon_sign = "W" if self.lon < 0.0 else "E"
+        lon_deg, rest = divmod(int(round(abs(self.lon) * 60000.0)), 60000)
+        lon_min, lon_min_dec = divmod(rest, 1000)
 
         validity = self.validity
         press_alt = int(self.press_alt)
@@ -220,9 +213,9 @@ class GNSSFix:
 
         return (
             "B"
-            + f"{int(hours):02d}{int(minutes):02d}{int(seconds):02d}"
-            + f"{int(lat_deg):02d}{int(lat_min):02d}{int(lat_min_dec):03d}{lat_sign}"
-            + f"{int(lon_deg):03d}{int(lon_min):02d}{int(lon_min_dec):03d}{lon_sign}"
+            + f"{hours:02d}{minutes:02d}{seconds:02d}"
+            + f"{lat_deg:02d}{lat_min:02d}{lat_min_dec:03d}{lat_sign}"
+            + f"{lon_deg:03d}{lon_min:02d}{lon_min_dec:03d}{lon_sign}"
             + validity
             + f"{press_alt:05d}{gnss_alt:05d}"
             + extras
