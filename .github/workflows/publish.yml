@@ -67,25 +67,57 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Publish to Test PyPI
-        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+      # The upload is attempted up to three times. The action opens its OIDC
+      # exchange with a hardcoded five second connect timeout and no retry of
+      # its own, so a momentary network blip between the runner and PyPI fails
+      # the whole release and needs a human to press re-run. That already
+      # happened once:
+      #
+      #   ConnectTimeout: upload.pypi.org/_/oidc/audience (connect timeout=5)
+      #
+      # Retrying is safe because `skip-existing` makes the upload idempotent:
+      # an attempt that already succeeded is a no-op on the next pass. Only the
+      # last attempt is allowed to fail the job, so a real problem, such as a
+      # trusted publisher that does not match, still stops the release rather
+      # than being retried into a confusing three-times-over failure.
+
+      - name: Publish (attempt 1)
+        id: attempt1
+        continue-on-error: true
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
-          # A rehearsal that re-uploads an existing version should not fail.
+          repository-url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           skip-existing: true
 
-      - name: Publish to PyPI
-        if: github.event_name == 'push' || inputs.target == 'pypi'
+      - name: Back off before retrying
+        if: steps.attempt1.outcome == 'failure'
+        run: sleep 30
+
+      - name: Publish (attempt 2)
+        id: attempt2
+        if: steps.attempt1.outcome == 'failure'
+        continue-on-error: true
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # Every push to master runs this, but most merges do not change the
-          # version. Skipping an existing version keeps those runs green
-          # instead of failing on a duplicate upload.
+          repository-url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           skip-existing: true
 
+      - name: Back off before the final attempt
+        if: steps.attempt1.outcome == 'failure' && steps.attempt2.outcome == 'failure'
+        run: sleep 60
+
+      # Not continue-on-error: if this one fails, the release fails.
+      - name: Publish (final attempt)
+        if: steps.attempt1.outcome == 'failure' && steps.attempt2.outcome == 'failure'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          skip-existing: true
+
+      # An explicit `if` replaces the implicit success() check, so it has to be
+      # spelled out, or a failed upload would still get tagged as released.
       - name: Tag the published version
-        if: github.event_name == 'push'
+        if: success() && github.event_name == 'push'
         run: |
           version=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
           if git ls-remote --exit-code --tags origin "v$version" >/dev/null 2>&1; then
