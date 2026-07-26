@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import xml.dom.minidom
 from collections import defaultdict
-
 from typing import TYPE_CHECKING
 
 from libigc.gnss_fix import GNSSFix
@@ -89,9 +88,8 @@ class Task:
         # Open XML document using minidom parser
         DOMTree = xml.dom.minidom.parse(filename)
         task = DOMTree.documentElement
-        assert isinstance(task, xml.dom.minidom.Element), (
-            "The task file is not valid XML"
-        )
+        if not isinstance(task, xml.dom.minidom.Element):
+            raise ValueError(f"{filename} is not a valid LK8000 task file")
 
         # Get the taskpoints, waypoints and time gate
         # TODO: add code to handle if these tags are missing.
@@ -209,8 +207,6 @@ class Task:
                     reached_turnpoints.append(fix)
                     t += 1
             else:
-                raise ValueError(
-                    f"Unknown turnpoint kind: {self.turnpoints[t].kind}"
-                )
+                raise ValueError(f"Unknown turnpoint kind: {self.turnpoints[t].kind}")
 
         return reached_turnpoints
