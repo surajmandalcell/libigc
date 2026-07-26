@@ -1,23 +1,18 @@
-#!/usr/bin/env -S uv run --script
+#!/usr/bin/env python3
 #
 # This script demonstrates how to use the libigc library to parse an IGC file,
 # extract flight details, and dump thermals and flight data to various output formats.
 #
-# If you have `uv` installed, this script can be run directly by just calling:
-#     ./libigc_demo.py <input_file.igc> [<task_file>]
-# `uv` will automatically install the required dependencies and run the script.
-#
-# /// script
-# dependencies = ["libigc"]
-# ///
+# Run it against the checkout you are working on with:
+#     uv run examples/libigc_demo.py <input_file.igc> [<task_file>]
 
 import argparse
 import sys
 from itertools import zip_longest
 from pathlib import Path
 
-from libigc.core import Flight
 import libigc.lib.dumpers as dumpers
+from libigc.core import Flight
 from libigc.task import Task
 
 
