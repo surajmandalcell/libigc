@@ -4,7 +4,7 @@ else
     RMDIR := rm -rf
 endif
 
-.PHONY: test deps clean build bump-major bump-minor bump-patch publish pack mix
+.PHONY: test lint format deps clean build bump-major bump-minor bump-patch publish pack mix
 
 TEST_PUBLISHED_OUTPUT := testpublishedoutput
 
@@ -12,8 +12,19 @@ TEST_PUBLISHED_OUTPUT := testpublishedoutput
 deps:
 	uv sync --all-extras
 
-test: deps
+test: lint
 	uv run pytest
+
+# Check formatting and lint rules without touching anything. This is what CI
+# and the release targets run.
+lint: deps
+	uv run ruff format --check .
+	uv run ruff check .
+
+# Apply the formatter and every autofixable lint rule.
+format: deps
+	uv run ruff format .
+	uv run ruff check --fix .
 
 clean:
 	-$(RMDIR) dist
@@ -42,13 +53,17 @@ publish: build
 test-publish: build
 	uv run twine upload -r testpypi dist/* --verbose $(ARGS)
 
-# Run example script with the package published to Test PyPI
+# Run example script against the package published to Test PyPI, rather than
+# against this checkout. --no-project keeps the local sources off sys.path and
+# --with pulls libigc from the index.
 # --index-strategy unsafe-best-match
 # We need to force it to look for other dependencies from the regular pypi server.
 # We save the output to a directory, and delete it afterwards if successful.
 test-testpypi-artifact:
 	uv run \
 	  --no-cache \
+	  --no-project \
+	  --with libigc \
 	  --index https://test.pypi.org/simple/ \
 	  --verbose \
 	  --index-strategy unsafe-best-match \
