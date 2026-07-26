@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import re
 import datetime
 import math
+import re
 import typing
 from pathlib import Path
 
-from .lib import viterbi
-from .gnss_fix import GNSSFix, AltitudeSource
-from .thermal import Thermal
-from .glide import Glide
 from .flight_parsing_config import FlightParsingConfig
+from .glide import Glide
+from .gnss_fix import AltitudeSource, GNSSFix
+from .lib import viterbi
+from .thermal import Thermal
 from .utils import _strip_non_printable_chars
 
 
@@ -83,8 +83,8 @@ class Flight:
         self.notes = []
         if len(fixes) < self._config.min_fixes:
             self.notes.append(
-                "Error: This file has %d fixes, less than "
-                "the minimum %d." % (len(fixes), self._config.min_fixes)
+                f"Error: This file has {len(fixes)} fixes, less than "
+                f"the minimum {self._config.min_fixes}."
             )
             self.valid = False
             return
@@ -283,9 +283,9 @@ class Flight:
                 )
 
     def __str__(self):
-        descr = "Flight(valid=%s, fixes: %d" % (str(self.valid), len(self.fixes))
+        descr = f"Flight(valid={self.valid}, fixes: {len(self.fixes)}"
         if hasattr(self, "thermals"):
-            descr += ", thermals: %d" % len(self.thermals)
+            descr += f", thermals: {len(self.thermals)}"
         descr += ")"
         return descr
 
@@ -329,48 +329,48 @@ class Flight:
         press_alt_ok = True
         if press_chgs_avg < self._config.min_avg_abs_alt_change:
             self.notes.append(
-                "Warning: average pressure altitude change between fixes "
-                "is: %f. It is lower than the minimum: %f."
-                % (press_chgs_avg, self._config.min_avg_abs_alt_change)
+                f"Warning: average pressure altitude change between fixes "
+                f"is: {press_chgs_avg:f}. It is lower than the minimum: "
+                f"{self._config.min_avg_abs_alt_change:f}."
             )
             press_alt_ok = False
 
         if press_huge_changes_num > self._config.max_alt_change_violations:
             self.notes.append(
-                "Warning: too many high changes in pressure altitude: %d. "
-                "Maximum allowed: %d."
-                % (press_huge_changes_num, self._config.max_alt_change_violations)
+                f"Warning: too many high changes in pressure altitude: "
+                f"{press_huge_changes_num}. "
+                f"Maximum allowed: {self._config.max_alt_change_violations}."
             )
             press_alt_ok = False
 
         if press_alt_violations_num > 0:
             self.notes.append(
-                "Warning: pressure altitude limits exceeded in %d fixes."
-                % (press_alt_violations_num)
+                f"Warning: pressure altitude limits exceeded in "
+                f"{press_alt_violations_num} fixes."
             )
             press_alt_ok = False
 
         gnss_alt_ok = True
         if gnss_chgs_avg < self._config.min_avg_abs_alt_change:
             self.notes.append(
-                "Warning: average gnss altitude change between fixes is: %f. "
-                "It is lower than the minimum: %f."
-                % (gnss_chgs_avg, self._config.min_avg_abs_alt_change)
+                f"Warning: average gnss altitude change between fixes is: "
+                f"{gnss_chgs_avg:f}. It is lower than the minimum: "
+                f"{self._config.min_avg_abs_alt_change:f}."
             )
             gnss_alt_ok = False
 
         if gnss_huge_changes_num > self._config.max_alt_change_violations:
             self.notes.append(
-                "Warning: too many high changes in gnss altitude: %d. "
-                "Maximum allowed: %d."
-                % (gnss_huge_changes_num, self._config.max_alt_change_violations)
+                f"Warning: too many high changes in gnss altitude: "
+                f"{gnss_huge_changes_num}. "
+                f"Maximum allowed: {self._config.max_alt_change_violations}."
             )
             gnss_alt_ok = False
 
         if gnss_alt_violations_num > 0:
             self.notes.append(
-                "Warning: gnss altitude limits exceeded in %d fixes."
-                % gnss_alt_violations_num
+                f"Warning: gnss altitude limits exceeded in "
+                f"{gnss_alt_violations_num} fixes."
             )
             gnss_alt_ok = False
 
@@ -407,16 +407,16 @@ class Flight:
 
         if rawtime_between_fix_exceeded > self._config.max_time_violations:
             self.notes.append(
-                "Error: too many fixes intervals exceed time between fixes "
-                "constraints. Allowed %d fixes, found %d fixes."
-                % (self._config.max_time_violations, rawtime_between_fix_exceeded)
+                f"Error: too many fixes intervals exceed time between fixes "
+                f"constraints. Allowed {self._config.max_time_violations} fixes, "
+                f"found {rawtime_between_fix_exceeded} fixes."
             )
             self.valid = False
         if days_added > self._config.max_new_days_in_flight:
             self.notes.append(
-                "Error: too many times did the flight cross the UTC 0:00 "
-                "barrier. Allowed %d times, found %d times."
-                % (self._config.max_new_days_in_flight, days_added)
+                f"Error: too many times did the flight cross the UTC 0:00 "
+                f"barrier. Allowed {self._config.max_new_days_in_flight} times, "
+                f"found {days_added} times."
             )
             self.valid = False
 
@@ -475,7 +475,7 @@ class Flight:
         # Step 2: apply _config.min_landing_time.
         ignore_next_downtime = False
         apply_next_downtime = False
-        for i, (fix, output) in enumerate(zip(self.fixes, outputs)):
+        for i, (fix, output) in enumerate(zip(self.fixes, outputs, strict=False)):
             if output == 1:
                 fix.flying = True
                 # We're in flying mode, therefore reset all expectations

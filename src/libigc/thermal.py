@@ -1,4 +1,5 @@
 import math
+
 from libigc.gnss_fix import GNSSFix
 from libigc.utils import _rawtime_float_to_hms
 
@@ -37,8 +38,7 @@ class Thermal:
 
     def __str__(self):
         hms = _rawtime_float_to_hms(self.time_change())
-        return "Thermal(vertical_velocity=%.2f m/s, duration=%dm %ds)" % (
-            self.vertical_velocity(),
-            hms.minutes,
-            hms.seconds,
+        return (
+            f"Thermal(vertical_velocity={self.vertical_velocity():.2f} m/s, "
+            f"duration={int(hms.minutes)}m {int(hms.seconds)}s)"
         )

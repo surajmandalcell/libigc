@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-from enum import Enum
 import re
-
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     # `core` imports `GNSSFix`, and we need `Flight` for type hinting.
     # This if TYPE_CHECKING block avoids circular import issues.
     from libigc.core import Flight
-from .lib import geo
 from libigc.utils import _rawtime_float_to_hms
 
+from .lib import geo
 
-class FixValidity(str, Enum):
+
+class FixValidity(StrEnum):
     A = "A"  # valid 3D fix
     V = "V"  # nav warning (2D fix or position may be unreliable)
 
 
-class AltitudeSource(str, Enum):
+class AltitudeSource(StrEnum):
     PRESSURE = "PRESS"
     GNSS = "GNSS"
 
@@ -162,21 +162,18 @@ class GNSSFix:
             self.alt = self.gnss_alt
         else:
             # This should never happen, but just in case, raise an exception.
-            raise ValueError(
-                f"Unknown altitude source: {self.flight.alt_source}."
-            )
+            raise ValueError(f"Unknown altitude source: {self.flight.alt_source}.")
         self.timestamp = self.rawtime + flight.date_timestamp
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
+        hms = _rawtime_float_to_hms(self.rawtime)
         return (
-            "GNSSFix(rawtime=%02d:%02d:%02d, lat=%f, lon=%f, press_alt=%.1f, gnss_alt=%.1f)"
-            % (
-                _rawtime_float_to_hms(self.rawtime)
-                + (self.lat, self.lon, self.press_alt, self.gnss_alt)
-            )
+            f"GNSSFix(rawtime={hms.hours:02d}:{hms.minutes:02d}:{hms.seconds:02d}, "
+            f"lat={self.lat:f}, lon={self.lon:f}, "
+            f"press_alt={self.press_alt:.1f}, gnss_alt={self.gnss_alt:.1f})"
         )
 
     def bearing_to(self, other: GNSSFix):
@@ -223,10 +220,10 @@ class GNSSFix:
 
         return (
             "B"
-            + "%02d%02d%02d" % (hours, minutes, seconds)
-            + "%02d%02d%03d%s" % (lat_deg, lat_min, lat_min_dec, lat_sign)
-            + "%03d%02d%03d%s" % (lon_deg, lon_min, lon_min_dec, lon_sign)
+            + f"{int(hours):02d}{int(minutes):02d}{int(seconds):02d}"
+            + f"{int(lat_deg):02d}{int(lat_min):02d}{int(lat_min_dec):03d}{lat_sign}"
+            + f"{int(lon_deg):03d}{int(lon_min):02d}{int(lon_min_dec):03d}{lon_sign}"
             + validity
-            + "%05d%05d" % (press_alt, gnss_alt)
+            + f"{press_alt:05d}{gnss_alt:05d}"
             + extras
         )

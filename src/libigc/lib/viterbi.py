@@ -1,7 +1,7 @@
 import math
 
 
-class SimpleViterbiDecoder(object):
+class SimpleViterbiDecoder:
     """A simple Viterbi algorightm implementation.
 
     For Markov models with two hidden states and two emission letters. The

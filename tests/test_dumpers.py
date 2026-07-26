@@ -1,16 +1,14 @@
 import os
 import shutil
-import unittest
 import tempfile
+import unittest
 
 from libigc import core as libigc
 from libigc.lib import dumpers
-
 from tests.test_utils import get_test_data_path
 
 
 class TestDumpers(unittest.TestCase):
-
     def setUp(self):
         igc_file = get_test_data_path("napret.igc")
         self.flight = libigc.Flight.create_from_file(igc_file)

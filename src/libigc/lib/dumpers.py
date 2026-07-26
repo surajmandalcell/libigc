@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
-import simplekml
 from pathlib import Path
+from typing import TYPE_CHECKING, NamedTuple
+
+import simplekml
 
 if TYPE_CHECKING:
     # ------------------------------------------------------------------
@@ -30,11 +31,12 @@ def _degrees_float_to_degrees_minutes_seconds(
 
     Args:
         dd: a float, degrees to be converted
-        long: a bool, argument used to calculate the hemisphere; True for longitude, False for latitude
+        long: a bool, argument used to calculate the hemisphere; True for
+        longitude, False for latitude
 
     Returns:
-        A DegreeMinuteSecond namedtuple with hemisphere, degrees, minutes and floating point
-        seconds elements.
+        A DegreeMinuteSecond namedtuple with hemisphere, degrees, minutes and
+        floating point seconds elements.
     """
     negative = dd < 0
     dd = abs(dd)
@@ -69,23 +71,23 @@ def dump_thermals_to_wpt_file(
     with wptfilename.open("w") as wpt:
         wpt.write("$FormatGEO\n")
 
-        for x, thermal in enumerate(flight.thermals):
+        for x, _thermal in enumerate(flight.thermals):
             lat = _degrees_float_to_degrees_minutes_seconds(
                 flight.thermals[x].enter_fix.lat, long=False
             )
             lon = _degrees_float_to_degrees_minutes_seconds(
                 flight.thermals[x].enter_fix.lon, long=True
             )
-            wpt.write("%02d        " % x)
+            wpt.write(f"{x:02d}        ")
             wpt.write(
-                "%s %02d %02d %05.2f    "
-                % (lat.hemisphere, lat.degrees, lat.minutes, lat.seconds)
+                f"{lat.hemisphere} {int(lat.degrees):02d} "
+                f"{int(lat.minutes):02d} {lat.seconds:05.2f}    "
             )
             wpt.write(
-                "%s %03d %02d %05.2f     "
-                % (lon.hemisphere, lon.degrees, lon.minutes, lon.seconds)
+                f"{lon.hemisphere} {int(lon.degrees):03d} "
+                f"{int(lon.minutes):02d} {lon.seconds:05.2f}     "
             )
-            wpt.write("          %d\n" % flight.thermals[x].enter_fix.gnss_alt)
+            wpt.write(f"          {int(flight.thermals[x].enter_fix.gnss_alt)}\n")
 
             if endpoints:
                 lat = _degrees_float_to_degrees_minutes_seconds(
@@ -94,16 +96,16 @@ def dump_thermals_to_wpt_file(
                 lon = _degrees_float_to_degrees_minutes_seconds(
                     flight.thermals[x].exit_fix.lon, long=True
                 )
-                wpt.write("%02dEND     " % x)
+                wpt.write(f"{x:02d}END     ")
                 wpt.write(
-                    "%s %02d %02d %05.2f    "
-                    % (lat.hemisphere, lat.degrees, lat.minutes, lat.seconds)
+                    f"{lat.hemisphere} {int(lat.degrees):02d} "
+                    f"{int(lat.minutes):02d} {lat.seconds:05.2f}    "
                 )
                 wpt.write(
-                    "%s %03d %02d %05.2f     "
-                    % (lon.hemisphere, lon.degrees, lon.minutes, lon.seconds)
+                    f"{lon.hemisphere} {int(lon.degrees):03d} "
+                    f"{int(lon.minutes):02d} {lon.seconds:05.2f}     "
                 )
-                wpt.write("          %d\n" % (flight.thermals[x].exit_fix.gnss_alt))
+                wpt.write(f"          {int(flight.thermals[x].exit_fix.gnss_alt)}\n")
 
 
 def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
@@ -121,31 +123,21 @@ def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
         def write_fix(name, fix):
             lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, long=False)
             lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, long=True)
+            lat_seconds = int(round(lat.seconds / 60.0 * 1000.0))
+            lon_seconds = int(round(lon.seconds / 60.0 * 1000.0))
             wpt.write(
-                '"%s",,,%02d%02d.%03d%s,'
-                % (
-                    name,
-                    lat.degrees,
-                    lat.minutes,
-                    int(round(lat.seconds / 60.0 * 1000.0)),
-                    lat.hemisphere,
-                )
+                f'"{name}",,,{int(lat.degrees):02d}{int(lat.minutes):02d}'
+                f".{lat_seconds:03d}{lat.hemisphere},"
             )
             wpt.write(
-                "%03d%02d.%03d%s,%fm,,,,,,,"
-                % (
-                    lon.degrees,
-                    lon.minutes,
-                    int(round(lon.seconds / 60.0 * 1000.0)),
-                    lon.hemisphere,
-                    fix.gnss_alt,
-                )
+                f"{int(lon.degrees):03d}{int(lon.minutes):02d}"
+                f".{lon_seconds:03d}{lon.hemisphere},{fix.gnss_alt:f}m,,,,,,,"
             )
             wpt.write("\n")
 
         for i, thermal in enumerate(flight.thermals):
-            write_fix("%02d" % i, thermal.enter_fix)
-            write_fix("%02d_END" % i, thermal.exit_fix)
+            write_fix(f"{i:02d}", thermal.enter_fix)
+            write_fix(f"{i:02d}_END", thermal.exit_fix)
 
 
 def dump_flight_to_kml(flight: Flight, kml_filename_local: str):
@@ -170,8 +162,8 @@ def dump_flight_to_kml(flight: Flight, kml_filename_local: str):
     add_point(name="Landing", fix=flight.landing_fix)
 
     for i, thermal in enumerate(flight.thermals):
-        add_point(name="thermal_%02d" % i, fix=thermal.enter_fix)
-        add_point(name="thermal_%02d_END" % i, fix=thermal.exit_fix)
+        add_point(name=f"thermal_{i:02d}", fix=thermal.enter_fix)
+        add_point(name=f"thermal_{i:02d}_END", fix=thermal.exit_fix)
 
     kml_filename = Path(kml_filename_local).expanduser().absolute()
     kml.save(kml_filename.as_posix())
@@ -195,17 +187,9 @@ def dump_flight_to_csv(
         )
         for fix in flight.fixes:
             csv.write(
-                "%f,%f,%f,%f,%f,%f,%s,%s\n"
-                % (
-                    fix.timestamp,
-                    fix.lat,
-                    fix.lon,
-                    fix.bearing,
-                    fix.bearing_change_rate,
-                    fix.ground_speed,
-                    str(fix.flying),
-                    str(fix.circling),
-                )
+                f"{fix.timestamp:f},{fix.lat:f},{fix.lon:f},{fix.bearing:f},"
+                f"{fix.bearing_change_rate:f},{fix.ground_speed:f},"
+                f"{fix.flying},{fix.circling}\n"
             )
 
     thermals_filename = Path(thermals_filename_local).expanduser().absolute()
@@ -213,5 +197,5 @@ def dump_flight_to_csv(
         csv.write("timestamp_enter,timestamp_exit\n")
         for thermal in flight.thermals:
             csv.write(
-                "%f,%f\n" % (thermal.enter_fix.timestamp, thermal.exit_fix.timestamp)
+                f"{thermal.enter_fix.timestamp:f},{thermal.exit_fix.timestamp:f}\n"
             )
