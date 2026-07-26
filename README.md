@@ -280,15 +280,23 @@ libigc is released under the MIT License. See the LICENSE file in the repository
 
 ## Additional Information
 
-To publish to PyPI, you'll need to:
+Releases are published by GitHub Actions using PyPI trusted publishing (OpenID Connect).
+There is no API token: PyPI verifies a short-lived identity token minted by GitHub for this
+repository, the `publish.yml` workflow and the `release` environment.
 
-- Register an account on PyPI and put your API token in `~/.pypirc`
-- Run `make bump-patch` (or `bump-minor`/`bump-major`) to update the version in `pyproject.toml`
-  and `src/libigc/__init__.py`, commit it and tag it
-- Run `make publish`, which cleans, tests, builds and uploads with twine
+To cut a release:
 
-`make test-publish` does the same against [test.pypi.org](https://test.pypi.org/), and
-`make test-testpypi-artifact` then runs the example script against that published artifact.
+- Run `make bump-patch` (or `bump-minor`/`bump-major`) to update the version in
+  `pyproject.toml` and `src/libigc/__init__.py`, commit it and tag it
+- Push the tag, then publish a GitHub Release for it
+- The `Publish` workflow builds, runs the tests, checks the artifacts and uploads them
+
+Run the `Publish` workflow manually with the `testpypi` option first to rehearse against
+[test.pypi.org](https://test.pypi.org/); that needs its own trusted publisher registered
+there, since the two indexes do not share configuration.
+
+The `make publish` and `make test-publish` targets still work for a local upload with
+twine, but the workflow is the supported path.
 
 ## Original Author
 

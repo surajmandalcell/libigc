@@ -1,0 +1,74 @@
+name: Publish
+
+# Publishing uses PyPI trusted publishing (OpenID Connect). There is no API
+# token anywhere: PyPI verifies a short-lived identity token minted by GitHub
+# for this exact repository, workflow file and environment, so the values
+# registered on PyPI must keep matching this file's path and the environment
+# name below.
+#
+# Cutting a release:
+#   1. make bump-minor      (or bump-patch / bump-major) and push the tag
+#   2. publish a GitHub Release for that tag
+#   3. this workflow builds, checks and uploads
+#
+# Run it manually against Test PyPI first with the workflow_dispatch button.
+# That needs its own trusted publisher registered on test.pypi.org, since the
+# two indexes do not share configuration.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Index to upload to
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # `make build` runs clean, lint and the full test suite before it
+      # packages anything, so a release cannot be cut from a red tree.
+      - name: Build the wheel and sdist
+        run: make build
+      - name: Check the artifact metadata
+        run: uv run --with twine twine check dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # The environment is half of what PyPI matches against, and it is where
+    # branch protection or a required reviewer can be attached later.
+    environment: release
+    permissions:
+      # Mints the OIDC token PyPI checks. This is the only privilege the job
+      # needs; it never sees a password or an API token.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to Test PyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
