@@ -1,6 +1,6 @@
+import json
 import sys
 from pathlib import Path
-import json
 
 try:
     import tkinter as tk
