@@ -9,10 +9,11 @@
 6. [Working with Tasks](#working-with-tasks)
 7. [Command-line Usage](#command-line-usage)
 8. [API Reference](#api-reference)
-9. [Contributing](#contributing)
-10. [License](#license)
-11. [Additional Information](#additional-information)
-12. [Original Author](#original-author)
+9. [Changelog](#changelog)
+10. [Contributing](#contributing)
+11. [License](#license)
+12. [Additional Information](#additional-information)
+13. [Original Author](#original-author)
 
 ## Introduction
 
@@ -241,6 +242,11 @@ Represents a single turnpoint in a task.
 - `lon`: Longitude of the turnpoint in degrees.
 - `radius`: Radius of the turnpoint cylinder in kilometers.
 - `kind`: Type of turnpoint (e.g., "start_exit", "cylinder", "goal_cylinder").
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Note that 1.2.0 raises the minimum Python to
+3.12 and changes what `str()` returns for `AltitudeSource` and `FixValidity`.
 
 ## Contributing
 
