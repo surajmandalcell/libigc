@@ -16,32 +16,48 @@ if TYPE_CHECKING:
 
 
 class DegreeMinuteSecond(NamedTuple):
-    """A named tuple to represent degrees, minutes and seconds."""
+    """A named tuple to represent degrees, minutes and sub-minute units.
+
+    `units` counts whole sub-minute units of the size the caller asked for,
+    and is always in range(units_per_minute), so it never overflows the fixed
+    width field it is written into.
+    """
 
     hemisphere: str
-    degrees: float
-    minutes: float
-    seconds: float
+    degrees: int
+    minutes: int
+    units: int
 
 
 def _degrees_float_to_degrees_minutes_seconds(
-    dd: float, *, long: bool = False
+    dd: float, units_per_minute: int, *, long: bool = False
 ) -> DegreeMinuteSecond:
-    """Converts from floating point degrees to degrees/minutes/seconds.
+    """Splits floating point degrees into degrees, minutes and smaller units.
+
+    The rounding to whole units happens once, up front, and the split is exact
+    integer arithmetic from there. That ordering is what keeps the fixed width
+    output well formed: rounding the minutes or the seconds at the point they
+    are formatted drops the carry, so 16.65 degrees comes out as
+    `16 38 60.00` instead of `16 39 00.00`, and a coordinate a whisker under a
+    whole minute overflows a three digit thousandths field to `1000`.
 
     Args:
         dd: a float, degrees to be converted
+        units_per_minute: an int, how finely to divide a minute; 6000 for
+        hundredths of a second, 1000 for thousandths of a minute
         long: a bool, argument used to calculate the hemisphere; True for
         longitude, False for latitude
 
     Returns:
-        A DegreeMinuteSecond namedtuple with hemisphere, degrees, minutes and
-        floating point seconds elements.
+        A DegreeMinuteSecond namedtuple with hemisphere, and integer degrees,
+        minutes and units elements.
     """
     negative = dd < 0
-    dd = abs(dd)
-    minutes, seconds = divmod(dd * 3600, 60)
-    degrees, minutes = divmod(minutes, 60)
+    units_per_degree = 60 * units_per_minute
+    total_units = int(round(abs(dd) * units_per_degree))
+    degrees, total_units = divmod(total_units, units_per_degree)
+    minutes, units = divmod(total_units, units_per_minute)
+
     if long:
         hemisphere = "E"
     else:
@@ -53,7 +69,7 @@ def _degrees_float_to_degrees_minutes_seconds(
         else:
             hemisphere = "S"
 
-    return DegreeMinuteSecond(hemisphere, degrees, minutes, seconds)
+    return DegreeMinuteSecond(hemisphere, degrees, minutes, units)
 
 
 def dump_thermals_to_wpt_file(
@@ -71,41 +87,26 @@ def dump_thermals_to_wpt_file(
     with wptfilename.open("w") as wpt:
         wpt.write("$FormatGEO\n")
 
-        for x, _thermal in enumerate(flight.thermals):
-            lat = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lat, long=False
-            )
-            lon = _degrees_float_to_degrees_minutes_seconds(
-                flight.thermals[x].enter_fix.lon, long=True
-            )
-            wpt.write(f"{x:02d}        ")
+        def write_fix(label, fix):
+            # $FormatGEO writes seconds to two decimals, so split the angle
+            # into hundredths of a second: 60 seconds * 100.
+            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, 6000, long=False)
+            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, 6000, long=True)
+            wpt.write(label)
             wpt.write(
-                f"{lat.hemisphere} {int(lat.degrees):02d} "
-                f"{int(lat.minutes):02d} {lat.seconds:05.2f}    "
+                f"{lat.hemisphere} {lat.degrees:02d} "
+                f"{lat.minutes:02d} {lat.units // 100:02d}.{lat.units % 100:02d}    "
             )
             wpt.write(
-                f"{lon.hemisphere} {int(lon.degrees):03d} "
-                f"{int(lon.minutes):02d} {lon.seconds:05.2f}     "
+                f"{lon.hemisphere} {lon.degrees:03d} "
+                f"{lon.minutes:02d} {lon.units // 100:02d}.{lon.units % 100:02d}     "
             )
-            wpt.write(f"          {int(flight.thermals[x].enter_fix.gnss_alt)}\n")
+            wpt.write(f"          {int(fix.gnss_alt)}\n")
 
+        for x, thermal in enumerate(flight.thermals):
+            write_fix(f"{x:02d}        ", thermal.enter_fix)
             if endpoints:
-                lat = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lat, long=False
-                )
-                lon = _degrees_float_to_degrees_minutes_seconds(
-                    flight.thermals[x].exit_fix.lon, long=True
-                )
-                wpt.write(f"{x:02d}END     ")
-                wpt.write(
-                    f"{lat.hemisphere} {int(lat.degrees):02d} "
-                    f"{int(lat.minutes):02d} {lat.seconds:05.2f}    "
-                )
-                wpt.write(
-                    f"{lon.hemisphere} {int(lon.degrees):03d} "
-                    f"{int(lon.minutes):02d} {lon.seconds:05.2f}     "
-                )
-                wpt.write(f"          {int(flight.thermals[x].exit_fix.gnss_alt)}\n")
+                write_fix(f"{x:02d}END     ", thermal.exit_fix)
 
 
 def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
@@ -121,17 +122,17 @@ def dump_thermals_to_cup_file(flight: Flight, cup_filename_local: str):
         wpt.write("lon,elev,style,rwdir,rwlen,freq,desc,userdata,pics\n")
 
         def write_fix(name, fix):
-            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, long=False)
-            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, long=True)
-            lat_seconds = int(round(lat.seconds / 60.0 * 1000.0))
-            lon_seconds = int(round(lon.seconds / 60.0 * 1000.0))
+            # SeeYou writes DDMM.mmm, so split the angle into thousandths of
+            # a minute.
+            lat = _degrees_float_to_degrees_minutes_seconds(fix.lat, 1000, long=False)
+            lon = _degrees_float_to_degrees_minutes_seconds(fix.lon, 1000, long=True)
             wpt.write(
-                f'"{name}",,,{int(lat.degrees):02d}{int(lat.minutes):02d}'
-                f".{lat_seconds:03d}{lat.hemisphere},"
+                f'"{name}",,,{lat.degrees:02d}{lat.minutes:02d}'
+                f".{lat.units:03d}{lat.hemisphere},"
             )
             wpt.write(
-                f"{int(lon.degrees):03d}{int(lon.minutes):02d}"
-                f".{lon_seconds:03d}{lon.hemisphere},{fix.gnss_alt:f}m,,,,,,,"
+                f"{lon.degrees:03d}{lon.minutes:02d}"
+                f".{lon.units:03d}{lon.hemisphere},{fix.gnss_alt:f}m,,,,,,,"
             )
             wpt.write("\n")
 
