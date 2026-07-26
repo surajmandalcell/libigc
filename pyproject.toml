@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools>=61"]
+# `license = "MIT"` below is PEP 639, which needs setuptools 77 or newer.
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "libigc"
-version = "1.1.0" # FIXME: Should probably bump this version?
+version = "1.1.0"
 description = "A library for parsing IGC files and extracting thermals"
 readme = "README.md"
 license = "MIT"
@@ -34,7 +35,7 @@ classifiers = [
 Homepage = "https://github.com/surajmandalcell/libigc"
 
 [project.optional-dependencies]
-dev = ["twine", "bump-my-version", "pytest"]
+dev = ["twine", "bump-my-version", "pytest", "ruff"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -42,6 +43,16 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+# baum_welch_trainer.py is Python 2 and imports Bio.Alphabet, removed from
+# BioPython in 1.78. ruff cannot even parse it. Excluded until it is ported
+# or dropped.
+exclude = ["tools"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear.
+select = ["E", "F", "I", "UP", "B"]
 
 [tool.bumpversion]
 current_version = "1.1.0"
