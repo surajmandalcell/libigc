@@ -30,7 +30,7 @@ extract valuable information from glider flight data.
 
 ## Installation
 
-libigc requires Python 3.9 or newer. You can install it using pip:
+libigc requires Python 3.12 or newer. You can install it using pip:
 
 ```bash
 pip install libigc
@@ -65,7 +65,7 @@ libigc provides various methods to analyze flight data:
 ```python
 # Iterate through thermals
 for i, thermal in enumerate(flight.thermals):
-    print(f"Thermal {i+1}:")
+    print(f"Thermal {i + 1}:")
     print(f"  Start time: {thermal.enter_fix.timestamp}")
     print(f"  End time: {thermal.exit_fix.timestamp}")
     print(f"  Duration: {thermal.time_change()} seconds")
@@ -74,7 +74,7 @@ for i, thermal in enumerate(flight.thermals):
 
 # Analyze glides
 for i, glide in enumerate(flight.glides):
-    print(f"Glide {i+1}:")
+    print(f"Glide {i + 1}:")
     print(f"  Start time: {glide.enter_fix.timestamp}")
     print(f"  End time: {glide.exit_fix.timestamp}")
     print(f"  Duration: {glide.time_change()} seconds")
@@ -96,7 +96,7 @@ from libigc.lib.dumpers import (
     dump_thermals_to_wpt_file,
     dump_thermals_to_cup_file,
     dump_flight_to_kml,
-    dump_flight_to_csv
+    dump_flight_to_csv,
 )
 
 # Dump thermals to a .wpt file
@@ -126,7 +126,7 @@ task = Task.create_from_lkt_file("task.lkt")
 turnpoints = [
     Turnpoint(lat=50.0, lon=14.0, radius=3.0, kind="start_exit"),
     Turnpoint(lat=51.0, lon=15.0, radius=0.5, kind="cylinder"),
-    Turnpoint(lat=52.0, lon=16.0, radius=3.0, kind="goal_cylinder")
+    Turnpoint(lat=52.0, lon=16.0, radius=3.0, kind="goal_cylinder"),
 ]
 task = Task(turnpoints, start_time=36000, end_time=64800)  # 10:00 to 18:00
 
@@ -143,10 +143,11 @@ else:
 libigc comes with a demo script that can be run from the command line:
 
 ```bash
-python -m libigc.examples.libigc_demo path/to/your/file.igc
+python examples/libigc_demo.py path/to/your/file.igc
 ```
 
-This will print a summary of the flight and save thermal and track data to CSV files.
+This will print a summary of the flight and save thermal and track data to CSV files. Pass
+`-o <dir>` to write the dumped files somewhere other than the current directory.
 
 ## API Reference
 
@@ -252,8 +253,20 @@ To contribute code:
 2. Create a new branch for your feature or bug fix.
 3. Write tests for your changes.
 4. Implement your changes.
-5. Run the test suite to ensure all tests pass.
+5. Run `make test` to format-check, lint and run the test suite.
 6. Submit a pull request with a clear description of your changes.
+
+### Code style
+
+Formatting and linting are both handled by [ruff](https://docs.astral.sh/ruff/), configured in
+`pyproject.toml`. The enabled rule sets are `E` (pycodestyle), `F` (pyflakes), `I` (import
+sorting), `UP` (pyupgrade) and `B` (bugbear), on top of the default `ruff format` style: 88
+columns, double quotes.
+
+```bash
+make format   # apply the formatter and every autofixable lint rule
+make lint     # check only, no writes
+```
 
 ## License
 
@@ -263,11 +276,13 @@ libigc is released under the MIT License. See the LICENSE file in the repository
 
 To publish to PyPI, you'll need to:
 
-- Register an account on PyPI
-- Install twine: `pip install twine`
-- Do `bumpversion patch --allow-dirty` (or minor/major) to update the version number in `setup.py`
-- Build your distribution: `python setup.py sdist bdist_wheel`
-- Upload to PyPI: `twine upload dist/*`
+- Register an account on PyPI and put your API token in `~/.pypirc`
+- Run `make bump-patch` (or `bump-minor`/`bump-major`) to update the version in `pyproject.toml`
+  and `src/libigc/__init__.py`, commit it and tag it
+- Run `make publish`, which cleans, tests, builds and uploads with twine
+
+`make test-publish` does the same against [test.pypi.org](https://test.pypi.org/), and
+`make test-testpypi-artifact` then runs the example script against that published artifact.
 
 ## Original Author
 
