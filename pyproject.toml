@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "libigc"
-version = "1.1.0"
+version = "1.2.0"
 description = "A library for parsing IGC files and extracting thermals"
 readme = "README.md"
 license = "MIT"
@@ -55,7 +55,7 @@ exclude = ["tools"]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.bumpversion]
-current_version = "1.1.0"
+current_version = "1.2.0"
 commit = true
 tag = true
 
