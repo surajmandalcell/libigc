@@ -1,23 +1,24 @@
 name: Publish
 
+# Whatever is on master is what gets published. Merging a pull request builds,
+# tests and uploads it to PyPI. There is no release to cut and nothing to
+# approve.
+#
+# To ship a new version, bump it in the pull request:
+#     make bump-patch    (or bump-minor / bump-major)
+# Merge, and this workflow publishes it and tags the commit.
+#
+# Merges that do not change the version are safe: that version is already on
+# PyPI, so the upload is skipped and the run stays green.
+#
 # Publishing uses PyPI trusted publishing (OpenID Connect). There is no API
-# token anywhere: PyPI verifies a short-lived identity token minted by GitHub
-# for this exact repository, workflow file and environment, so the values
-# registered on PyPI must keep matching this file's path and the environment
-# name below.
-#
-# Cutting a release:
-#   1. make bump-minor      (or bump-patch / bump-major) and push the tag
-#   2. publish a GitHub Release for that tag
-#   3. this workflow builds, checks and uploads
-#
-# Run it manually against Test PyPI first with the workflow_dispatch button.
-# That needs its own trusted publisher registered on test.pypi.org, since the
-# two indexes do not share configuration.
+# token: PyPI verifies a short-lived identity token minted by GitHub for this
+# exact repository, workflow file and environment, so the values registered on
+# PyPI must keep matching this file's path and the environment name below.
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [master]
   workflow_dispatch:
     inputs:
       target:
@@ -39,7 +40,7 @@ jobs:
         with:
           enable-cache: true
       # `make build` runs clean, lint and the full test suite before it
-      # packages anything, so a release cannot be cut from a red tree.
+      # packages anything, so a red tree cannot be published.
       - name: Build the wheel and sdist
         run: make build
       - name: Check the artifact metadata
@@ -52,23 +53,45 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    # The environment is half of what PyPI matches against, and it is where
-    # branch protection or a required reviewer can be attached later.
+    # The environment is half of what PyPI matches against.
     environment: release
     permissions:
-      # Mints the OIDC token PyPI checks. This is the only privilege the job
-      # needs; it never sees a password or an API token.
+      # Mints the OIDC token PyPI checks. No password, no API token.
       id-token: write
+      # Pushes the version tag once the upload succeeds.
+      contents: write
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist/
+
       - name: Publish to Test PyPI
         if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          # A rehearsal that re-uploads an existing version should not fail.
+          skip-existing: true
+
       - name: Publish to PyPI
-        if: github.event_name == 'release' || inputs.target == 'pypi'
+        if: github.event_name == 'push' || inputs.target == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Every push to master runs this, but most merges do not change the
+          # version. Skipping an existing version keeps those runs green
+          # instead of failing on a duplicate upload.
+          skip-existing: true
+
+      - name: Tag the published version
+        if: github.event_name == 'push'
+        run: |
+          version=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          if git ls-remote --exit-code --tags origin "v$version" >/dev/null 2>&1; then
+            echo "v$version is already tagged, nothing to do"
+          else
+            git tag "v$version"
+            git push origin "v$version"
+            echo "tagged v$version"
+          fi

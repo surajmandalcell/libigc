@@ -280,20 +280,26 @@ libigc is released under the MIT License. See the LICENSE file in the repository
 
 ## Additional Information
 
-Releases are published by GitHub Actions using PyPI trusted publishing (OpenID Connect).
-There is no API token: PyPI verifies a short-lived identity token minted by GitHub for this
-repository, the `publish.yml` workflow and the `release` environment.
+Whatever is on `master` is what is published. There is no release to cut and nothing to
+approve: merging a pull request builds, tests and uploads to PyPI.
 
-To cut a release:
+To ship a new version, bump it in the pull request:
 
-- Run `make bump-patch` (or `bump-minor`/`bump-major`) to update the version in
-  `pyproject.toml` and `src/libigc/__init__.py`, commit it and tag it
-- Push the tag, then publish a GitHub Release for it
-- The `Publish` workflow builds, runs the tests, checks the artifacts and uploads them
+```bash
+make bump-patch   # or bump-minor / bump-major
+```
 
-Run the `Publish` workflow manually with the `testpypi` option first to rehearse against
-[test.pypi.org](https://test.pypi.org/); that needs its own trusted publisher registered
-there, since the two indexes do not share configuration.
+Merge it, and the `Publish` workflow uploads that version and tags the commit. Merges that
+do not change the version are safe; that version is already on PyPI, so the upload is
+skipped and the run stays green.
+
+Publishing uses trusted publishing (OpenID Connect). There is no API token: PyPI verifies a
+short-lived identity token minted by GitHub for this repository, the `publish.yml` workflow
+and the `release` environment.
+
+To rehearse against [test.pypi.org](https://test.pypi.org/), run the `Publish` workflow
+manually with the `testpypi` option. That needs its own trusted publisher registered there,
+since the two indexes do not share configuration.
 
 The `make publish` and `make test-publish` targets still work for a local upload with
 twine, but the workflow is the supported path.
