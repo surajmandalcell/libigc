@@ -1,4 +1,5 @@
 import math
+
 from libigc.gnss_fix import GNSSFix
 from libigc.utils import _rawtime_float_to_hms
 
@@ -45,7 +46,7 @@ class Glide:
     def __str__(self):
         hms = _rawtime_float_to_hms(self.time_change())
         return (
-            ("Glide(dist=%.2f km, avg_speed=%.2f kph, "
-             "avg L/D=%.2f duration=%dm %ds)") % (
-                self.track_length, self.speed(), self.glide_ratio(),
-                hms.minutes, hms.seconds))
+            f"Glide(dist={self.track_length:.2f} km, avg_speed={self.speed():.2f} kph, "
+            f"avg L/D={self.glide_ratio():.2f} "
+            f"duration={int(hms.minutes)}m {int(hms.seconds)}s)"
+        )

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import re
 import datetime
 import math
+import re
 import typing
 from pathlib import Path
 
-from .lib import viterbi
-from .gnss_fix import GNSSFix, AltitudeSource
-from .thermal import Thermal
-from .glide import Glide
 from .flight_parsing_config import FlightParsingConfig
+from .glide import Glide
+from .gnss_fix import AltitudeSource, GNSSFix
+from .lib import viterbi
+from .thermal import Thermal
 from .utils import _strip_non_printable_chars
 
 
@@ -68,7 +68,14 @@ class Flight:
     notes: list[str]
     alt_source: AltitudeSource
 
-    def __init__(self, fixes: list[GNSSFix], a_records: list, h_records: list, i_records: list, config: FlightParsingConfig):
+    def __init__(
+        self,
+        fixes: list[GNSSFix],
+        a_records: list,
+        h_records: list,
+        i_records: list,
+        config: FlightParsingConfig,
+    ):
         """Initializer of the Flight class. Do not use directly."""
         self._config = config
         self.fixes = fixes
@@ -76,8 +83,9 @@ class Flight:
         self.notes = []
         if len(fixes) < self._config.min_fixes:
             self.notes.append(
-                "Error: This file has %d fixes, less than "
-                "the minimum %d." % (len(fixes), self._config.min_fixes))
+                f"Error: This file has {len(fixes)} fixes, less than "
+                f"the minimum {self._config.min_fixes}."
+            )
             self.valid = False
             return
 
@@ -94,8 +102,7 @@ class Flight:
         elif self.gnss_alt_valid:
             self.alt_source = AltitudeSource.GNSS
         else:
-            self.notes.append(
-                "Error: neither pressure nor gnss altitude is valid.")
+            self.notes.append("Error: neither pressure nor gnss altitude is valid.")
             self.valid = False
             return
 
@@ -106,7 +113,7 @@ class Flight:
         if h_records:
             self._parse_h_records(h_records)
 
-        if not hasattr(self, 'date_timestamp'):
+        if not hasattr(self, "date_timestamp"):
             self.notes.append("Error: no date record (HFDTE) in the file")
             self.valid = False
             return
@@ -117,7 +124,7 @@ class Flight:
         self._compute_ground_speeds()
         self._compute_flight()
         self._compute_takeoff_landing()
-        if not hasattr(self, 'takeoff_fix'):
+        if not hasattr(self, "takeoff_fix"):
             self.notes.append("Error: did not detect takeoff.")
             self.valid = False
             return
@@ -128,7 +135,7 @@ class Flight:
         self._find_thermals()
 
     @staticmethod
-    def create_from_file(filename, config_class=FlightParsingConfig):
+    def create_from_file(filename: str, config_class=FlightParsingConfig):
         """Creates an instance of Flight from a given file.
 
         Args:
@@ -144,14 +151,14 @@ class Flight:
         i_records = []
         h_records = []
         abs_filename = Path(filename).expanduser().absolute()
-        with abs_filename.open('r', encoding="ISO-8859-1") as flight_file:
+        with abs_filename.open("r", encoding="ISO-8859-1") as flight_file:
             for line in flight_file:
-                line = line.replace(r"\n", "").replace(r"\r", "")
+                line = line.replace("\n", "").replace("\r", "")
                 if not line:
                     continue
-                if line[0] == 'A':
+                if line[0] == "A":
                     a_records.append(line)
-                elif line[0] == 'B':
+                elif line[0] == "B":
                     fix = GNSSFix.build_from_B_record(line, index=len(fixes))
                     if fix is not None:
                         if fixes and math.fabs(fix.rawtime - fixes[-1].rawtime) < 1e-5:
@@ -160,9 +167,9 @@ class Flight:
                             pass
                         else:
                             fixes.append(fix)
-                elif line[0] == 'I':
+                elif line[0] == "I":
                     i_records.append(line)
-                elif line[0] == 'H':
+                elif line[0] == "H":
                     h_records.append(line)
                 else:
                     # Do not parse any other types of IGC records
@@ -198,14 +205,16 @@ class Flight:
             self._parse_h_record(record)
 
     def _parse_h_record(self, record):
-        if record[0:5] == 'HFDTE':
+        if record[0:5] == "HFDTE":
             match = re.match(
                 r"(?:HFDTE|HFDTEDATE:[ ]*)(\d\d)(\d\d)(\d\d)",
                 record,
                 flags=re.IGNORECASE,
             )
             if match:
-                dd, mm, yy = [_strip_non_printable_chars(group) for group in match.groups()]
+                dd, mm, yy = [
+                    _strip_non_printable_chars(group) for group in match.groups()
+                ]
                 year = int(2000 + int(yy))
                 month = int(mm)
                 day = int(dd)
@@ -213,60 +222,70 @@ class Flight:
                     epoch = datetime.datetime(year=1970, month=1, day=1)
                     date = datetime.datetime(year=year, month=month, day=day)
                     self.date_timestamp = (date - epoch).total_seconds()
-        elif record[0:5] == 'HFGTY':
+        elif record[0:5] == "HFGTY":
             match = re.match(
-                'HFGTY[ ]*GLIDER[ ]*TYPE[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFGTY[ ]*GLIDER[ ]*TYPE[ ]*:[ ]*(.*)", record, flags=re.IGNORECASE
+            )
             if match:
-                (self.glider_type,) = map(
-                    _strip_non_printable_chars, match.groups())
-        elif record[0:5] == 'HFRFW' or record[0:5] == 'HFRHW':
+                (self.glider_type,) = map(_strip_non_printable_chars, match.groups())
+        elif record[0:5] == "HFRFW" or record[0:5] == "HFRHW":
             match = re.match(
-                'HFR[FH]W[ ]*FIRMWARE[ ]*VERSION[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFR[FH]W[ ]*FIRMWARE[ ]*VERSION[ ]*:[ ]*(.*)",
+                record,
+                flags=re.IGNORECASE,
+            )
             if match:
                 (self.fr_firmware_version,) = map(
-                    _strip_non_printable_chars, match.groups())
+                    _strip_non_printable_chars, match.groups()
+                )
             match = re.match(
-                'HFR[FH]W[ ]*HARDWARE[ ]*VERSION[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFR[FH]W[ ]*HARDWARE[ ]*VERSION[ ]*:[ ]*(.*)",
+                record,
+                flags=re.IGNORECASE,
+            )
             if match:
                 (self.fr_hardware_version,) = map(
-                    _strip_non_printable_chars, match.groups())
-        elif record[0:5] == 'HFFTY':
+                    _strip_non_printable_chars, match.groups()
+                )
+        elif record[0:5] == "HFFTY":
             match = re.match(
-                'HFFTY[ ]*FR[ ]*TYPE[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFFTY[ ]*FR[ ]*TYPE[ ]*:[ ]*(.*)", record, flags=re.IGNORECASE
+            )
             if match:
-                (self.fr_recorder_type,) = map(_strip_non_printable_chars,
-                                               match.groups())
-        elif record[0:5] == 'HFGPS':
+                (self.fr_recorder_type,) = map(
+                    _strip_non_printable_chars, match.groups()
+                )
+        elif record[0:5] == "HFGPS":
+            match = re.match("HFGPS(?:[: ]|(?:GPS))*(.*)", record, flags=re.IGNORECASE)
+            if match:
+                (self.fr_gps_receiver,) = map(
+                    _strip_non_printable_chars, match.groups()
+                )
+        elif record[0:5] == "HFPRS":
             match = re.match(
-                'HFGPS(?:[: ]|(?:GPS))*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFPRS[ ]*PRESS[ ]*ALT[ ]*SENSOR[ ]*:[ ]*(.*)",
+                record,
+                flags=re.IGNORECASE,
+            )
             if match:
-                (self.fr_gps_receiver,) = map(_strip_non_printable_chars,
-                                              match.groups())
-        elif record[0:5] == 'HFPRS':
+                (self.fr_pressure_sensor,) = map(
+                    _strip_non_printable_chars, match.groups()
+                )
+        elif record[0:5] == "HFCCL":
             match = re.match(
-                'HFPRS[ ]*PRESS[ ]*ALT[ ]*SENSOR[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
+                "HFCCL[ ]*COMPETITION[ ]*CLASS[ ]*:[ ]*(.*)",
+                record,
+                flags=re.IGNORECASE,
+            )
             if match:
-                (self.fr_pressure_sensor,) = map(_strip_non_printable_chars,
-                                                 match.groups())
-        elif record[0:5] == 'HFCCL':
-            match = re.match(
-                'HFCCL[ ]*COMPETITION[ ]*CLASS[ ]*:[ ]*(.*)',
-                record, flags=re.IGNORECASE)
-            if match:
-                (self.competition_class,) = map(_strip_non_printable_chars,
-                                                match.groups())
+                (self.competition_class,) = map(
+                    _strip_non_printable_chars, match.groups()
+                )
 
     def __str__(self):
-        descr = "Flight(valid=%s, fixes: %d" % (
-            str(self.valid), len(self.fixes))
-        if hasattr(self, 'thermals'):
-            descr += ", thermals: %d" % len(self.thermals)
+        descr = f"Flight(valid={self.valid}, fixes: {len(self.fixes)}"
+        if hasattr(self, "thermals"):
+            descr += f", thermals: {len(self.thermals)}"
         descr += ")"
         return descr
 
@@ -279,27 +298,30 @@ class Flight:
         gnss_chgs_sum = 0.0
         for i in range(len(self.fixes) - 1):
             press_alt_delta = math.fabs(
-                self.fixes[i+1].press_alt - self.fixes[i].press_alt)
+                self.fixes[i + 1].press_alt - self.fixes[i].press_alt
+            )
             gnss_alt_delta = math.fabs(
-                self.fixes[i+1].gnss_alt - self.fixes[i].gnss_alt)
-            rawtime_delta = math.fabs(
-                self.fixes[i+1].rawtime - self.fixes[i].rawtime)
+                self.fixes[i + 1].gnss_alt - self.fixes[i].gnss_alt
+            )
+            rawtime_delta = math.fabs(self.fixes[i + 1].rawtime - self.fixes[i].rawtime)
             if rawtime_delta > 0.5:
-                if (press_alt_delta / rawtime_delta >
-                        self._config.max_alt_change_rate):
+                if press_alt_delta / rawtime_delta > self._config.max_alt_change_rate:
                     press_huge_changes_num += 1
                 else:
                     press_chgs_sum += press_alt_delta
-                if (gnss_alt_delta / rawtime_delta >
-                        self._config.max_alt_change_rate):
+                if gnss_alt_delta / rawtime_delta > self._config.max_alt_change_rate:
                     gnss_huge_changes_num += 1
                 else:
                     gnss_chgs_sum += gnss_alt_delta
-            if (self.fixes[i].press_alt > self._config.max_alt
-                    or self.fixes[i].press_alt < self._config.min_alt):
+            if (
+                self.fixes[i].press_alt > self._config.max_alt
+                or self.fixes[i].press_alt < self._config.min_alt
+            ):
                 press_alt_violations_num += 1
-            if (self.fixes[i].gnss_alt > self._config.max_alt or
-                    self.fixes[i].gnss_alt < self._config.min_alt):
+            if (
+                self.fixes[i].gnss_alt > self._config.max_alt
+                or self.fixes[i].gnss_alt < self._config.min_alt
+            ):
                 gnss_alt_violations_num += 1
         press_chgs_avg = press_chgs_sum / float(len(self.fixes) - 1)
         gnss_chgs_avg = gnss_chgs_sum / float(len(self.fixes) - 1)
@@ -307,45 +329,49 @@ class Flight:
         press_alt_ok = True
         if press_chgs_avg < self._config.min_avg_abs_alt_change:
             self.notes.append(
-                "Warning: average pressure altitude change between fixes "
-                "is: %f. It is lower than the minimum: %f."
-                % (press_chgs_avg, self._config.min_avg_abs_alt_change))
+                f"Warning: average pressure altitude change between fixes "
+                f"is: {press_chgs_avg:f}. It is lower than the minimum: "
+                f"{self._config.min_avg_abs_alt_change:f}."
+            )
             press_alt_ok = False
 
         if press_huge_changes_num > self._config.max_alt_change_violations:
             self.notes.append(
-                "Warning: too many high changes in pressure altitude: %d. "
-                "Maximum allowed: %d."
-                % (press_huge_changes_num,
-                   self._config.max_alt_change_violations))
+                f"Warning: too many high changes in pressure altitude: "
+                f"{press_huge_changes_num}. "
+                f"Maximum allowed: {self._config.max_alt_change_violations}."
+            )
             press_alt_ok = False
 
         if press_alt_violations_num > 0:
             self.notes.append(
-                "Warning: pressure altitude limits exceeded in %d fixes."
-                % (press_alt_violations_num))
+                f"Warning: pressure altitude limits exceeded in "
+                f"{press_alt_violations_num} fixes."
+            )
             press_alt_ok = False
 
         gnss_alt_ok = True
         if gnss_chgs_avg < self._config.min_avg_abs_alt_change:
             self.notes.append(
-                "Warning: average gnss altitude change between fixes is: %f. "
-                "It is lower than the minimum: %f."
-                % (gnss_chgs_avg, self._config.min_avg_abs_alt_change))
+                f"Warning: average gnss altitude change between fixes is: "
+                f"{gnss_chgs_avg:f}. It is lower than the minimum: "
+                f"{self._config.min_avg_abs_alt_change:f}."
+            )
             gnss_alt_ok = False
 
         if gnss_huge_changes_num > self._config.max_alt_change_violations:
             self.notes.append(
-                "Warning: too many high changes in gnss altitude: %d. "
-                "Maximum allowed: %d."
-                % (gnss_huge_changes_num,
-                   self._config.max_alt_change_violations))
+                f"Warning: too many high changes in gnss altitude: "
+                f"{gnss_huge_changes_num}. "
+                f"Maximum allowed: {self._config.max_alt_change_violations}."
+            )
             gnss_alt_ok = False
 
         if gnss_alt_violations_num > 0:
             self.notes.append(
-                "Warning: gnss altitude limits exceeded in %d fixes." %
-                gnss_alt_violations_num)
+                f"Warning: gnss altitude limits exceeded in "
+                f"{gnss_alt_violations_num} fixes."
+            )
             gnss_alt_ok = False
 
         self.press_alt_valid = press_alt_ok
@@ -363,12 +389,11 @@ class Flight:
         rawtime_to_add = 0.0
         rawtime_between_fix_exceeded = 0
         for i in range(1, len(self.fixes)):
-            f0 = self.fixes[i-1]
+            f0 = self.fixes[i - 1]
             f1 = self.fixes[i]
             f1.rawtime += rawtime_to_add
 
-            if (f0.rawtime > f1.rawtime and
-                    f1.rawtime + DAY < f0.rawtime + 200.0):
+            if f0.rawtime > f1.rawtime and f1.rawtime + DAY < f0.rawtime + 200.0:
                 # Day switch
                 days_added += 1
                 rawtime_to_add += DAY
@@ -382,28 +407,29 @@ class Flight:
 
         if rawtime_between_fix_exceeded > self._config.max_time_violations:
             self.notes.append(
-                "Error: too many fixes intervals exceed time between fixes "
-                "constraints. Allowed %d fixes, found %d fixes."
-                % (self._config.max_time_violations,
-                   rawtime_between_fix_exceeded))
+                f"Error: too many fixes intervals exceed time between fixes "
+                f"constraints. Allowed {self._config.max_time_violations} fixes, "
+                f"found {rawtime_between_fix_exceeded} fixes."
+            )
             self.valid = False
         if days_added > self._config.max_new_days_in_flight:
             self.notes.append(
-                "Error: too many times did the flight cross the UTC 0:00 "
-                "barrier. Allowed %d times, found %d times."
-                % (self._config.max_new_days_in_flight, days_added))
+                f"Error: too many times did the flight cross the UTC 0:00 "
+                f"barrier. Allowed {self._config.max_new_days_in_flight} times, "
+                f"found {days_added} times."
+            )
             self.valid = False
 
     def _compute_ground_speeds(self):
         """Adds ground speed info (km/h) to self.fixes."""
         self.fixes[0].ground_speed = 0.0
         for i in range(1, len(self.fixes)):
-            dist = self.fixes[i].distance_to(self.fixes[i-1])
-            rawtime = self.fixes[i].rawtime - self.fixes[i-1].rawtime
+            dist = self.fixes[i].distance_to(self.fixes[i - 1])
+            rawtime = self.fixes[i].rawtime - self.fixes[i - 1].rawtime
             if math.fabs(rawtime) < 1e-5:
                 self.fixes[i].ground_speed = 0.0
             else:
-                self.fixes[i].ground_speed = dist/rawtime*3600.0
+                self.fixes[i].ground_speed = dist / rawtime * 3600.0
 
     def _flying_emissions(self):
         """Generates raw flying/not flying emissions from ground speed.
@@ -441,14 +467,15 @@ class Flight:
             emission_probs=[
                 [0.8, 0.2],  # emissions from standing
                 [0.2, 0.8],  # emissions from flying
-            ])
+            ],
+        )
 
         outputs = decoder.decode(emissions)
 
         # Step 2: apply _config.min_landing_time.
         ignore_next_downtime = False
         apply_next_downtime = False
-        for i, (fix, output) in enumerate(zip(self.fixes, outputs)):
+        for i, (fix, output) in enumerate(zip(self.fixes, outputs, strict=False)):
             if output == 1:
                 fix.flying = True
                 # We're in flying mode, therefore reset all expectations
@@ -524,7 +551,7 @@ class Flight:
     def _compute_bearings(self):
         """Adds bearing info to self.fixes."""
         for i in range(len(self.fixes) - 1):
-            self.fixes[i].bearing = self.fixes[i].bearing_to(self.fixes[i+1])
+            self.fixes[i].bearing = self.fixes[i].bearing_to(self.fixes[i + 1])
         self.fixes[-1].bearing = self.fixes[-2].bearing
 
     def _compute_bearing_change_rates(self):
@@ -535,6 +562,7 @@ class Flight:
         Therefore we compute rates between points that are at least
         min_time_for_bearing_change seconds apart.
         """
+
         def find_prev_fix(curr_fix):
             """Computes the previous fix to be used in bearing rate change."""
             prev_fix = None
@@ -554,25 +582,25 @@ class Flight:
             while change < -180.0:
                 change += 360.0
             return change
-        
+
         def infer_wrapped_bearing_change(prev_bearing, curr_bearing, dt, prev_rate):
             # Try all 3 possible deltas
             raw_change = curr_bearing - prev_bearing
 
             options = [
-                raw_change,                  # No wrapping
-                raw_change - 360.0,          # Wrapped forward
-                raw_change + 360.0           # Wrapped backward
+                raw_change,  # No wrapping
+                raw_change - 360.0,  # Wrapped forward
+                raw_change + 360.0,  # Wrapped backward
             ]
 
             # Pick the one with rate closest to previous rate
             best_change = min(
                 options,
-                key=lambda c: abs((c / dt) - prev_rate) if dt > 0 else float("inf")
+                key=lambda c: abs((c / dt) - prev_rate) if dt > 0 else float("inf"),
             )
 
             return best_change
-        
+
         for curr_fix in range(len(self.fixes)):
             prev_fix = find_prev_fix(curr_fix)
 
@@ -583,8 +611,13 @@ class Flight:
             time_change = (
                 self.fixes[curr_fix].timestamp - self.fixes[prev_fix].timestamp
             )
-            
-            bearing_change = infer_wrapped_bearing_change(self.fixes[prev_fix].bearing, self.fixes[curr_fix].bearing, time_change, self.fixes[prev_fix].bearing_change_rate)
+
+            bearing_change = infer_wrapped_bearing_change(
+                self.fixes[prev_fix].bearing,
+                self.fixes[curr_fix].bearing,
+                time_change,
+                self.fixes[prev_fix].bearing_change_rate,
+            )
 
             # Avoid division by zero
             if abs(time_change) < 1e-7:
@@ -604,7 +637,8 @@ class Flight:
         for fix in self.fixes:
             bearing_change = math.fabs(fix.bearing_change_rate)
             bearing_change_enough = (
-                bearing_change > self._config.min_bearing_change_circling)
+                bearing_change > self._config.min_bearing_change_circling
+            )
             if fix.flying and bearing_change_enough:
                 emissions.append(1)
             else:
@@ -624,12 +658,13 @@ class Flight:
             emission_probs=[
                 [0.942, 0.058],  # emissions from straight flight
                 [0.093, 0.907],  # emissions from circling
-            ])
+            ],
+        )
 
         output = decoder.decode(emissions)
 
         for i in range(len(self.fixes)):
-            self.fixes[i].circling = (output[i] == 1)
+            self.fixes[i].circling = output[i] == 1
 
     def _find_thermals(self):
         """Go through the fixes and find the thermals.
@@ -640,7 +675,7 @@ class Flight:
         """
         takeoff_index = self.takeoff_fix.index
         landing_index = self.landing_fix.index
-        flight_fixes = self.fixes[takeoff_index:landing_index + 1]
+        flight_fixes = self.fixes[takeoff_index : landing_index + 1]
 
         self.thermals: list[Thermal] = []
         self.glides: list[Glide] = []
@@ -656,8 +691,7 @@ class Flight:
             elif circling is not None and not fix.circling:
                 # Just ended circling
                 thermal = Thermal(circling.first_fix, fix)
-                if (thermal.time_change() >
-                        self._config.min_time_for_thermal - 1e-5):
+                if thermal.time_change() > self._config.min_time_for_thermal - 1e-5:
                     self.thermals.append(thermal)
                     # ----------------------------------------------------------
                     # `gliding` can never be None here: it is assigned on every

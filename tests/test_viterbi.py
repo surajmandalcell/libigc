@@ -4,7 +4,6 @@ from libigc.lib import viterbi
 
 
 class TestSimpleViterbiDecoder(unittest.TestCase):
-
     def setUp(self):
         self.init_probs = [0.5, 0.5]
         self.transition_probs = [

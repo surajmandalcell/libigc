@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import xml.dom.minidom
 from collections import defaultdict
-
 from typing import TYPE_CHECKING
+
+from libigc.gnss_fix import GNSSFix
+
 if TYPE_CHECKING:
     # ------------------------------------------------------------------
     # `Flight` is needed only for type hints. Importing it at runtime
@@ -13,6 +15,7 @@ if TYPE_CHECKING:
     # ------------------------------------------------------------------
     from libigc.core import Flight
 from .lib import geo
+
 
 class Turnpoint:
     """A single turnpoint in a Task.
@@ -36,16 +39,19 @@ class Turnpoint:
         self.radius = radius
         self.kind = kind
 
-        assert kind in ["start_exit", "start_enter", "cylinder",
-                        "End_of_speed_section", "goal_cylinder",
-                        "goal_line"], \
-            "turnpoint type is not valid: %r" % kind
+        assert kind in [
+            "start_exit",
+            "start_enter",
+            "cylinder",
+            "End_of_speed_section",
+            "goal_cylinder",
+            "goal_line",
+        ], f"turnpoint type is not valid: {kind}"
 
     def in_radius(self, fix):
         """Checks whether the provided GNSSFix is within the radius"""
         distance = geo.earth_distance(self.lat, self.lon, fix.lat, fix.lon)
         return distance < self.radius
-
 
 
 class Task:
@@ -73,15 +79,17 @@ class Task:
 
     @staticmethod
     def create_from_lkt_file(filename: str):
-        """ Creates Task from LK8000 task file, which is in xml format.
-            LK8000 does not have End of Speed Section or task finish time.
-            For the goal, at the moment, Turnpoints can't handle goal cones or
-            lines, for this reason we default to goal_cylinder.
+        """Creates Task from LK8000 task file, which is in xml format.
+        LK8000 does not have End of Speed Section or task finish time.
+        For the goal, at the moment, Turnpoints can't handle goal cones or
+        lines, for this reason we default to goal_cylinder.
         """
 
         # Open XML document using minidom parser
         DOMTree = xml.dom.minidom.parse(filename)
         task = DOMTree.documentElement
+        if not isinstance(task, xml.dom.minidom.Element):
+            raise ValueError(f"{filename} is not a valid LK8000 task file")
 
         # Get the taskpoints, waypoints and time gate
         # TODO: add code to handle if these tags are missing.
@@ -92,9 +100,9 @@ class Task:
         wpoints = waypoints.getElementsByTagName("point")
         start_time = gate.getAttribute("open-time")
 
-        start_hours, start_minutes = start_time.split(':')
+        start_hours, start_minutes = start_time.split(":")
         start_time = int(start_hours) * 3600 + int(start_minutes) * 60
-        end_time = 23*3600 + 59*60 + 59  # default end_time of 23:59:59
+        end_time = 23 * 3600 + 59 * 60 + 59  # default end_time of 23:59:59
 
         # Create a dictionary of names and a list of longitudes and latitudes
         # as the waypoints co-ordinates are stored separate to turnpoint
@@ -113,7 +121,7 @@ class Task:
         for point in tpoints:
             lat = coords[point.getAttribute("name")][1]
             lon = coords[point.getAttribute("name")][0]
-            radius = float(point.getAttribute("radius"))/1000
+            radius = float(point.getAttribute("radius")) / 1000
 
             if point == tpoints[0]:
                 # It is the first turnpoint, the start
@@ -143,17 +151,16 @@ class Task:
         task = Task(turnpoints, start_time, end_time)
         return task
 
-
     def check_flight(self, flight: Flight):
-        """ Checks a Flight object against the task.
+        """Checks a Flight object against the task.
 
-            Args:
-                flight: a Flight object
+        Args:
+            flight: a Flight object
 
-            Returns:
-                a list of GNSSFixes of when turnpoints were achieved.
+        Returns:
+            a list of GNSSFixes of when turnpoints were achieved.
         """
-        reached_turnpoints = []
+        reached_turnpoints: list[GNSSFix] = []
         proceed_to_start = False
         t = 0
         for fix in flight.fixes:
@@ -190,15 +197,16 @@ class Task:
                         # Pilot is outside start after the start time.
                         proceed_to_start = True
 
-            elif self.turnpoints[t].kind in ["cylinder",
-                                             "End_of_speed_section",
-                                             "goal_cylinder"]:
+            elif self.turnpoints[t].kind in [
+                "cylinder",
+                "End_of_speed_section",
+                "goal_cylinder",
+            ]:
                 if self.turnpoints[t].in_radius(fix):
                     # pilot has achieved turnpoint
                     reached_turnpoints.append(fix)
                     t += 1
             else:
-                assert False, (
-                    "Unknown turnpoint kind: %s" % self.turnpoints[t].kind)
+                raise ValueError(f"Unknown turnpoint kind: {self.turnpoints[t].kind}")
 
         return reached_turnpoints

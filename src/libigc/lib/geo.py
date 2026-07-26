@@ -19,8 +19,10 @@ def sphere_distance(lat1: float, lon1: float, lat2: float, lon2: float):
     """
     dlon = lon2 - lon1
     dlat = lat2 - lat1
-    a = (math.sin(dlat/2)**2 +
-         math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
     return 2.0 * math.asin(math.sqrt(a))
 
 
@@ -61,8 +63,9 @@ def bearing_to(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
     dLon = lon2 - lon1
     y = math.sin(dLon) * math.cos(lat2)
-    x = (math.cos(lat1) * math.sin(lat2) -
-         math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(
+        dLon
+    )
     return math.degrees(math.atan2(y, x))
 
 
@@ -92,12 +95,13 @@ def sphere_angle(lat1, lon1, lat, lon, lat2, lon2):
         A float, the angle between the points.
     """
     lat1, lon1, lat, lon, lat2, lon2 = map(
-        math.radians, [lat1, lon1, lat, lon, lat2, lon2])
+        math.radians, [lat1, lon1, lat, lon, lat2, lon2]
+    )
     side1 = sphere_distance(lat, lon, lat1, lon1)
     side2 = sphere_distance(lat, lon, lat2, lon2)
     opposite = sphere_distance(lat1, lon1, lat2, lon2)
-    cosine = (math.cos(opposite) - math.cos(side1) * math.cos(side2))
-    cosine /= (math.sin(side1) * math.sin(side2))
+    cosine = math.cos(opposite) - math.cos(side1) * math.cos(side2)
+    cosine /= math.sin(side1) * math.sin(side2)
 
     if cosine > 1.0:
         cosine = 1.0

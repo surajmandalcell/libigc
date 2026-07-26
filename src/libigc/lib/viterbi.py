@@ -1,14 +1,19 @@
 import math
 
 
-class SimpleViterbiDecoder(object):
+class SimpleViterbiDecoder:
     """A simple Viterbi algorightm implementation.
 
     For Markov models with two hidden states and two emission letters. The
     states and the emissions are represented by 0 and 1.
     """
 
-    def __init__(self, init_probs: list[float], transition_probs: list[list[float]], emission_probs: list[list[float]]):
+    def __init__(
+        self,
+        init_probs: list[float],
+        transition_probs: list[list[float]],
+        emission_probs: list[list[float]],
+    ):
         """Initializer for the class.
 
         Args:

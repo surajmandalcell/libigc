@@ -5,7 +5,6 @@ from libigc.lib import geo
 
 
 class TestSphereDistance(unittest.TestCase):
-
     def testAlongTheEquator(self):
         for lon_start in [0.0, 10.0, 20.0, 35.0]:
             for lon_end in [0.0, 5.0, 10.0, 45.0, 90.0, 180.0]:
@@ -75,7 +74,6 @@ class TestSphereDistance(unittest.TestCase):
 
 
 class TestEarthDistance(unittest.TestCase):
-
     def testLondonToNewYork(self):
         self.assertAlmostEqual(
             geo.earth_distance(
@@ -116,7 +114,6 @@ class TestEarthDistance(unittest.TestCase):
 
 
 class TestBearingTo(unittest.TestCase):
-
     def testEquatorToNorthPole(self):
         for lon in [0.0, 15.0, 45.0, 90.0, 180.0, 270.0]:
             self.assertAlmostEqual(
@@ -155,7 +152,6 @@ class TestBearingTo(unittest.TestCase):
 
 
 class TestSphereAngle(unittest.TestCase):
-
     def testEquatorAndStraightNorthSouth(self):
         for latitude in [10.0, -20.0, 30.0, -50.0, 90.0]:
             self.assertAlmostEqual(

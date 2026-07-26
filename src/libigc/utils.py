@@ -1,10 +1,13 @@
 from typing import NamedTuple
 
+
 class HourMinuteSecond(NamedTuple):
     """A named tuple to represent hours, minutes and seconds."""
+
     hours: int
     minutes: int
     seconds: int
+
 
 def _strip_non_printable_chars(string: str):
     """Filters a string removing non-printable characters.
@@ -15,11 +18,13 @@ def _strip_non_printable_chars(string: str):
     Returns:
         A string, where non-printable characters are removed.
     """
-    printable = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL"
-                    "MNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ")
+    printable = set(
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL"
+        "MNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ "
+    )
 
     printable_string = [x for x in string if x in printable]
-    return ''.join(printable_string)
+    return "".join(printable_string)
 
 
 def _rawtime_float_to_hms(timef: float):

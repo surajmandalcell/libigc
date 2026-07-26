@@ -177,3 +177,5 @@ venv.sh
 
 repomix-output.txt
 issue*.md
+
+.ruff_cache/

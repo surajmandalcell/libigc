@@ -2,16 +2,14 @@ import os
 import tempfile
 import unittest
 
-from libigc.task import Task
-from libigc.lib import dumpers, viterbi
-from libigc.utils import _rawtime_float_to_hms
 from libigc import core as libigc
-
+from libigc.lib import dumpers, viterbi
+from libigc.task import Task
+from libigc.utils import _rawtime_float_to_hms
 from tests.test_utils import get_test_data_path
 
 
 class TestBuildFromBRecord(unittest.TestCase):
-
     def setUp(self):
         self.test_record = "B1227484612592N01249579EA0043700493extra-3s"
         self.test_index = 10
@@ -69,9 +67,31 @@ class TestBuildFromBRecord(unittest.TestCase):
         # "extra-3s", from B1227484612592N01249579EA0043700493 "extra-3s"
         self.assertEqual("extra-3s", b_record.extras)
 
+    def testToBRecordRoundTrip(self):
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
+
+        # to_B_record() has to reproduce the line it was parsed from, field
+        # widths and all.
+        self.assertEqual(self.test_record, b_record.to_B_record())
+
+    def testToBRecordRoundTripSouthWest(self):
+        # Southern and western hemispheres take the sign-flipping branches.
+        record = "B1227484612592S01249579WA0043700493extra-3s"
+        b_record = libigc.GNSSFix.build_from_B_record(record, self.test_index)
+
+        self.assertEqual(record, b_record.to_B_record())
+
+    def testToBRecordWrapsPastMidnight(self):
+        # Flight._check_fix_rawtime pushes rawtime past 86400 for flights that
+        # cross 0:00 UTC. A B record only has room for a time of day, so the
+        # hour has to wrap rather than be written out as "24".
+        b_record = libigc.GNSSFix.build_from_B_record(self.test_record, self.test_index)
+        b_record.rawtime += 24 * 3600
+
+        self.assertEqual(self.test_record, b_record.to_B_record())
+
 
 class TestNapretTaskParsing(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("napret.lkt")
         self.task = Task.create_from_lkt_file(test_file)
@@ -106,7 +126,6 @@ class TestNapretTaskParsing(unittest.TestCase):
 
 
 class TestNapretFlightParsing(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("napret.igc")
         self.flight = libigc.Flight.create_from_file(test_file)
@@ -195,7 +214,6 @@ class TestNapretFlightParsing(unittest.TestCase):
 
 
 class TestNewIGCDateIncrement(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("new_date_format.igc")
         self.flight = libigc.Flight.create_from_file(test_file)
@@ -210,7 +228,6 @@ class TestNewIGCDateIncrement(unittest.TestCase):
 
 
 class TestNoTimeIncrementFlightParsing(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("no_time_increment.igc")
         self.flight = libigc.Flight.create_from_file(test_file)
@@ -226,7 +243,6 @@ class TestNoTimeIncrementFlightParsing(unittest.TestCase):
 
 
 class TestOlsztynFlightParsing(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("olsztyn.igc")
         self.flight = libigc.Flight.create_from_file(test_file)
@@ -256,7 +272,6 @@ class TestOlsztynFlightParsing(unittest.TestCase):
 
 
 class TestNewZealandFlightParsing(unittest.TestCase):
-
     def setUp(self):
         test_file = get_test_data_path("new_zealand.igc")
         self.flight = libigc.Flight.create_from_file(test_file)
@@ -275,7 +290,6 @@ class ParsePickConcat(libigc.FlightParsingConfig):
 
 
 class TestWhichFlightToPick(unittest.TestCase):
-
     def setUp(self):
         self.test_file = get_test_data_path("flight_with_middle_landing.igc")
 
@@ -323,13 +337,14 @@ class TestWhichFlightToPick(unittest.TestCase):
 #      working as a deprecated alias.
 # ----------------------------------------------------------------------
 
-class TestViterbiDecodeIsRepeatable(unittest.TestCase):
 
+class TestViterbiDecodeIsRepeatable(unittest.TestCase):
     def testTwoDecodesOnSameInstanceGiveSameResult(self):
         decoder = viterbi.SimpleViterbiDecoder(
             init_probs=[0.5, 0.5],
             transition_probs=[[0.9, 0.1], [0.1, 0.9]],
-            emission_probs=[[0.8, 0.2], [0.2, 0.8]])
+            emission_probs=[[0.8, 0.2], [0.2, 0.8]],
+        )
         emissions = [0, 1, 1, 0, 1, 1, 1, 0, 0, 1]
         first = decoder.decode(emissions)
         second = decoder.decode(emissions)
@@ -337,7 +352,6 @@ class TestViterbiDecodeIsRepeatable(unittest.TestCase):
 
 
 class TestRawtimeFloatToHms(unittest.TestCase):
-
     def testReturnsIntegerParts(self):
         hms = _rawtime_float_to_hms(3.5 * 3600 + 10)  # 03:30:10
         self.assertEqual((hms.hours, hms.minutes, hms.seconds), (3, 30, 10))
@@ -347,10 +361,8 @@ class TestRawtimeFloatToHms(unittest.TestCase):
 
 
 class TestKmlDumpWithoutThermals(unittest.TestCase):
-
     def testDumpFlightWithNoThermalsWritesFile(self):
-        flight = libigc.Flight.create_from_file(
-            get_test_data_path("napret.igc"))
+        flight = libigc.Flight.create_from_file(get_test_data_path("napret.igc"))
         self.assertTrue(flight.valid)
         flight.thermals = []
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -360,10 +372,8 @@ class TestKmlDumpWithoutThermals(unittest.TestCase):
 
 
 class TestGspAlias(unittest.TestCase):
-
     def testGspIsAliasForGroundSpeed(self):
-        flight = libigc.Flight.create_from_file(
-            get_test_data_path("napret.igc"))
+        flight = libigc.Flight.create_from_file(get_test_data_path("napret.igc"))
         self.assertTrue(flight.valid)
         fix = flight.fixes[100]
         self.assertEqual(fix.gsp, fix.ground_speed)
