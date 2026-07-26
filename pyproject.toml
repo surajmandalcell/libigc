@@ -44,12 +44,6 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 
-[tool.ruff]
-# baum_welch_trainer.py is Python 2 and imports Bio.Alphabet, removed from
-# BioPython in 1.78. ruff cannot even parse it. Excluded until it is ported
-# or dropped.
-exclude = ["tools"]
-
 [tool.ruff.lint]
 # pycodestyle, pyflakes, isort, pyupgrade, bugbear.
 select = ["E", "F", "I", "UP", "B"]
